@@ -1,0 +1,6 @@
+{
+  "name": "Design Project Kanban",
+  "description": "Multi-project engineering and design task management portal with role-based flow controls, comments, notifications, and exportable reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
