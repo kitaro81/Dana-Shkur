@@ -12,7 +12,15 @@ import {
   AlertTriangle,
   ExternalLink,
   Users,
-  LayoutGrid
+  LayoutGrid,
+  Flag,
+  Pin,
+  Grid,
+  Trash2,
+  PlusCircle,
+  Lock,
+  Unlock,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -24,6 +32,15 @@ interface CalendarViewProps {
   selectedProjectId: string;
   onSelectTask: (taskId: string) => void;
   currentUser: User;
+  onUpdateTask?: (updatedTask: Task) => void;
+}
+
+export interface TaskMarker {
+  id: string;
+  date: string; // YYYY-MM-DD
+  title: string;
+  color: string; // Hex color code or similar
+  description?: string;
 }
 
 interface PackedTask {
@@ -42,6 +59,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   selectedProjectId,
   onSelectTask,
   currentUser,
+  onUpdateTask,
 }) => {
   const isTeamMember = currentUser.role !== 'admin' && currentUser.role !== 'viewer';
   
@@ -55,6 +73,25 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     isTeamMember && currentUser.discipline ? currentUser.discipline : 'all'
   );
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
+  // Snap to Grid state
+  const [snapToGrid, setSnapToGrid] = useState<boolean>(true);
+
+  // Task Markers state
+  const [taskMarkers, setTaskMarkers] = useState<TaskMarker[]>([
+    { id: 'marker-1', date: '2026-06-18', title: 'Schematic Design Review', color: '#EF4444', description: 'Coordinated architecture and structural review checkpoint' },
+    { id: 'marker-2', date: '2026-06-24', title: 'QC Coordination Check', color: '#F59E0B', description: 'Interdisciplinary collision detection & clash verification' },
+    { id: 'marker-3', date: '2026-06-28', title: 'Client Package Release', color: '#10B981', description: 'Milestone issue for final customer construction sign-off' },
+  ]);
+
+  // Marker Form States
+  const [showAddMarker, setShowAddMarker] = useState<boolean>(false);
+  const [markerFormDate, setMarkerFormDate] = useState<string>('2026-06-22');
+  const [markerFormTitle, setMarkerFormTitle] = useState<string>('');
+  const [markerFormColor, setMarkerFormColor] = useState<string>('#6366F1');
+  const [markerFormDesc, setMarkerFormDesc] = useState<string>('');
+  const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
   // Sync disciplineFilter when current user or role shifts
   useEffect(() => {
@@ -71,6 +108,95 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       setProjectFilter(selectedProjectId);
     }
   }, [selectedProjectId]);
+
+  // Visual/Action Feedback Banner Trigger
+  const triggerFeedback = (msg: string) => {
+    setFeedbackMessage(msg);
+    setTimeout(() => {
+      setFeedbackMessage(null);
+    }, 3500);
+  };
+
+  // Add customized task marker (Milestone)
+  const handleAddMarker = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!markerFormTitle.trim()) return;
+
+    // Dates naturally conform to standard grid because they are from HTML5 date picker (daily YYYY-MM-DD format)
+    const newMarker: TaskMarker = {
+      id: `marker-${Date.now()}`,
+      date: markerFormDate,
+      title: markerFormTitle.trim(),
+      color: markerFormColor,
+      description: markerFormDesc.trim() || undefined
+    };
+
+    setTaskMarkers(prev => [...prev, newMarker]);
+    setMarkerFormTitle('');
+    setMarkerFormDesc('');
+    setShowAddMarker(false);
+    triggerFeedback(`Task Marker "${newMarker.title}" pinned successfully!`);
+  };
+
+  // Delete task marker
+  const handleDeleteMarker = (id: string) => {
+    const target = taskMarkers.find(m => m.id === id);
+    setTaskMarkers(prev => prev.filter(m => m.id !== id));
+    if (target) {
+      triggerFeedback(`Marker "${target.title}" has been deleted.`);
+    }
+  };
+
+  // Gantt Date Shifter (Slides the task in time)
+  const handleShiftTask = (task: Task, days: number) => {
+    if (!onUpdateTask) return;
+
+    const currentDueDateObj = new Date(task.dueDate + 'T00:00:00');
+    currentDueDateObj.setDate(currentDueDateObj.getDate() + days);
+    const newDueDateStr = currentDueDateObj.toISOString().split('T')[0];
+
+    let newCreatedAtStr = task.createdAt;
+    if (task.createdAt) {
+      const currentCreatedDateObj = new Date(task.createdAt.substring(0, 10) + 'T00:00:00');
+      currentCreatedDateObj.setDate(currentCreatedDateObj.getDate() + days);
+      const timePortion = task.createdAt.includes('T') ? task.createdAt.split('T')[1] : '12:00:00.000Z';
+      newCreatedAtStr = `${currentCreatedDateObj.toISOString().split('T')[0]}T${timePortion}`;
+    }
+
+    const updated = {
+      ...task,
+      createdAt: newCreatedAtStr,
+      dueDate: newDueDateStr,
+      updatedAt: new Date().toISOString()
+    };
+
+    onUpdateTask(updated);
+    triggerFeedback(`Shifted task block by ${days} day${Math.abs(days) !== 1 ? 's' : ''}${snapToGrid ? ' (Snapped to Grid)' : ''}`);
+  };
+
+  // Gantt Duration Resizer (Extends or contracts task)
+  const handleResizeTask = (task: Task, days: number) => {
+    if (!onUpdateTask) return;
+
+    const currentDueDateObj = new Date(task.dueDate + 'T00:00:00');
+    currentDueDateObj.setDate(currentDueDateObj.getDate() + days);
+    const newDueDateStr = currentDueDateObj.toISOString().split('T')[0];
+
+    const startDateStr = task.createdAt ? task.createdAt.substring(0, 10) : '2026-06-22';
+    if (new Date(newDueDateStr) < new Date(startDateStr)) {
+      triggerFeedback("Error: Cannot contract duration past task start date!");
+      return;
+    }
+
+    const updated = {
+      ...task,
+      dueDate: newDueDateStr,
+      updatedAt: new Date().toISOString()
+    };
+
+    onUpdateTask(updated);
+    triggerFeedback(`Adjusted due date by ${days} day${Math.abs(days) !== 1 ? 's' : ''}${snapToGrid ? ' (Snapped to Grid)' : ''}`);
+  };
 
   // Generate date array for the schedule timeline view
   const generateTimelineDates = (start: Date, daysCount: number): string[] => {
@@ -354,6 +480,35 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               <CalendarIcon className="w-3.5 h-3.5 text-slate-400" />
               Reset Window
             </button>
+
+            <button
+              onClick={() => {
+                setSnapToGrid(prev => !prev);
+                triggerFeedback(snapToGrid ? "Snap to Grid: DISABLED (Fluid adjustments)" : "Snap to Grid: ENABLED (Daily align locked)");
+              }}
+              className={`px-2.5 py-1.5 border text-[11px] font-bold rounded-lg cursor-pointer transition-colors flex items-center gap-1 shadow-3xs ${
+                snapToGrid 
+                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100' 
+                  : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'
+              }`}
+              title={snapToGrid ? "Align milestones and task adjustments to day grids" : "Free alignment mode"}
+            >
+              <Grid className="w-3.5 h-3.5" />
+              <span>Snap to Grid: {snapToGrid ? 'ON' : 'OFF'}</span>
+            </button>
+
+            <button
+              onClick={() => setShowAddMarker(prev => !prev)}
+              className={`px-2.5 py-1.5 border text-[11px] font-bold rounded-lg cursor-pointer transition-colors flex items-center gap-1 shadow-3xs ${
+                showAddMarker 
+                  ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100' 
+                  : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'
+              }`}
+              title="Pin a new milestone or project deadline on the timeline"
+            >
+              <Flag className="w-3.5 h-3.5 text-amber-500" />
+              <span>Add Marker</span>
+            </button>
           </div>
 
           {/* Scale & Filters */}
@@ -415,6 +570,126 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
         </div>
 
+        {/* Feedback Alert Toast Overlay */}
+        <AnimatePresence>
+          {feedbackMessage && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-indigo-600 text-white text-xs font-semibold px-4 py-2.5 flex items-center justify-between border-b border-indigo-500 shadow-inner"
+            >
+              <div className="flex items-center gap-2">
+                <div className="bg-indigo-500 p-1 rounded-full">
+                  <Pin className="w-3.5 h-3.5 text-white" />
+                </div>
+                <span>{feedbackMessage}</span>
+              </div>
+              <button 
+                onClick={() => setFeedbackMessage(null)}
+                className="text-[10px] bg-indigo-700 hover:bg-indigo-800 text-indigo-100 font-bold px-2 py-0.5 rounded transition-all cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Add Marker Form Drawer */}
+        <AnimatePresence>
+          {showAddMarker && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-slate-50 border-b border-slate-200 overflow-hidden"
+            >
+              <form onSubmit={handleAddMarker} className="p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <Flag className="w-3.5 h-3.5 text-amber-500 animate-pulse" /> Pin Timeline Milestone / Task Marker
+                  </h4>
+                  <button 
+                    type="button"
+                    onClick={() => setShowAddMarker(false)}
+                    className="text-slate-400 hover:text-slate-600 text-xs font-bold"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div className="md:col-span-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase font-mono mb-1">Target Date</label>
+                    <input 
+                      type="date" 
+                      value={markerFormDate}
+                      onChange={(e) => setMarkerFormDate(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase font-mono mb-1">Marker / Milestone Title</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Stage 1 Scheme Deliverable"
+                      value={markerFormTitle}
+                      onChange={(e) => setMarkerFormTitle(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-400"
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase font-mono mb-1">Theme Accent Color</label>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="color" 
+                        value={markerFormColor}
+                        onChange={(e) => setMarkerFormColor(e.target.value)}
+                        className="w-8 h-8 rounded border border-slate-200 cursor-pointer p-0 bg-transparent"
+                      />
+                      <select
+                        value={markerFormColor}
+                        onChange={(e) => setMarkerFormColor(e.target.value)}
+                        className="flex-1 px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      >
+                        <option value="#EF4444">Rose Red</option>
+                        <option value="#F59E0B">Amber Yellow</option>
+                        <option value="#10B981">Emerald Green</option>
+                        <option value="#3B82F6">Royal Blue</option>
+                        <option value="#6366F1">Indigo Purple</option>
+                        <option value="#EC4899">Hot Pink</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase font-mono mb-1">Brief Description</label>
+                  <input 
+                    type="text"
+                    placeholder="Provide details about what must be locked, compiled, or reviewed by this milestone..."
+                    value={markerFormDesc}
+                    onChange={(e) => setMarkerFormDesc(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-400"
+                  />
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg cursor-pointer transition-colors flex items-center gap-1 shadow-2xs"
+                  >
+                    <Flag className="w-3.5 h-3.5" />
+                    <span>Pin Milestone Marker</span>
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Timeline Dates Scroll Grid Frame */}
         <div className="flex-1 overflow-x-auto">
           <div className="min-w-[800px] flex flex-col">
@@ -424,18 +699,42 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               <div className="w-[180px] shrink-0 pl-4 flex items-center">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">Swimlanes</span>
               </div>
-              <div className="flex-1 grid" style={{ gridTemplateColumns: `repeat(${timeScaleDays}, minmax(0, 1fr))` }}>
+              <div className="flex-1 grid animate-fadeIn" style={{ gridTemplateColumns: `repeat(${timeScaleDays}, minmax(0, 1fr))` }}>
                 {timelineDates.map(dateStr => {
                   const dateObj = new Date(dateStr + 'T00:00:00');
                   const isToday = dateStr === '2026-06-22';
+                  const matchingMarkers = taskMarkers.filter(m => m.date === dateStr);
                   
                   return (
                     <div 
                       key={dateStr} 
-                      className={`text-center py-1 flex flex-col items-center justify-center border-l border-slate-100/60 font-mono ${
+                      className={`text-center py-1 flex flex-col items-center justify-center border-l border-slate-100/60 font-mono relative group ${
                         isToday ? 'bg-indigo-50/50' : ''
                       }`}
                     >
+                      {/* Milestone Flag Badge indicators with tooltip details */}
+                      {matchingMarkers.length > 0 && (
+                        <div className="absolute top-0 flex gap-0.5 z-20">
+                          {matchingMarkers.map(m => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                triggerFeedback(`Milestone Active: "${m.title}" - ${m.description || 'Deadline checkpoint'}`);
+                              }}
+                              onMouseEnter={() => setHoveredMarkerId(m.id)}
+                              onMouseLeave={() => setHoveredMarkerId(null)}
+                              className="p-0.5 rounded-full hover:scale-125 cursor-pointer transition-transform"
+                              style={{ color: m.color }}
+                              title={`${m.title}${m.description ? `: ${m.description}` : ''}`}
+                            >
+                              <Flag className="w-3 h-3 fill-current" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
                       <span className={`text-[9px] font-bold uppercase ${isToday ? 'text-indigo-600' : 'text-slate-400'}`}>
                         {dateObj.toLocaleDateString(undefined, { weekday: 'short' })}
                       </span>
@@ -487,19 +786,71 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       </div>
 
                       {/* Lane Gantt Schedule Tracks Area */}
-                      <div className="flex-1 relative" style={{ height: `${trackHeight}px` }}>
+                      <div className="flex-1 relative bg-white dark:bg-slate-900" style={{ height: `${trackHeight}px` }}>
                         
-                        {/* Column separator background lines */}
-                        <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${timeScaleDays}, minmax(0, 1fr))` }}>
-                          {timelineDates.map(dateStr => (
-                            <div key={`bg-line-${dateStr}`} className={`border-l border-slate-100 h-full ${
-                              dateStr === '2026-06-22' ? 'bg-indigo-50/10 border-l-indigo-200/50' : ''
-                            }`} />
-                          ))}
+                        {/* Interactive grid background lines & Snap to Grid click targets */}
+                        <div className="absolute inset-0 grid z-0" style={{ gridTemplateColumns: `repeat(${timeScaleDays}, minmax(0, 1fr))` }}>
+                          {timelineDates.map(dateStr => {
+                            const isToday = dateStr === '2026-06-22';
+                            return (
+                              <div 
+                                key={`bg-line-${dateStr}`} 
+                                onClick={() => {
+                                  if (selectedTaskId) {
+                                    const selectedTask = tasks.find(t => t.id === selectedTaskId);
+                                    if (selectedTask && onUpdateTask) {
+                                      const updated = {
+                                        ...selectedTask,
+                                        dueDate: dateStr,
+                                        updatedAt: new Date().toISOString()
+                                      };
+                                      onUpdateTask(updated);
+                                      triggerFeedback(`Snapped due date of "${selectedTask.title}" to ${dateStr}`);
+                                    }
+                                  }
+                                }}
+                                className={`border-l border-slate-100 dark:border-slate-800 h-full transition-colors relative group ${
+                                  isToday ? 'bg-indigo-50/10 dark:bg-indigo-950/10 border-l-indigo-200/50 dark:border-l-indigo-800/50' : ''
+                                } ${
+                                  selectedTaskId 
+                                    ? 'cursor-pointer hover:bg-indigo-100/30 dark:hover:bg-indigo-900/20' 
+                                    : ''
+                                }`}
+                                title={selectedTaskId ? `Click to snap selected task due date to ${dateStr} (Snap to Grid)` : undefined}
+                              >
+                                {selectedTaskId && (
+                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                    <span className="text-[8px] font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 px-1.5 py-0.5 rounded shadow-3xs">
+                                      Snap Date
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
 
+                        {/* Task Milestone Vertical Markers & Guides (Aligning perfectly to the Grid) */}
+                        {taskMarkers.map(m => {
+                          const markerIndex = timelineDates.indexOf(m.date);
+                          if (markerIndex === -1) return null;
+                          const markerLeftPct = (markerIndex / timeScaleDays) * 100;
+                          return (
+                            <div 
+                              key={`v-marker-${m.id}`}
+                              className="absolute top-0 bottom-0 z-10 pointer-events-none border-l-2 border-dashed transition-all"
+                              style={{ 
+                                left: `${markerLeftPct}%`, 
+                                borderColor: m.color,
+                                opacity: hoveredMarkerId === m.id ? 0.9 : 0.4,
+                                borderWidth: hoveredMarkerId === m.id ? '2.5px' : '1.5px'
+                              }}
+                            />
+                          );
+                        })}
+
                         {/* Absolutely positioned Dynamic Gantt Task Bars */}
-                        <div className="absolute inset-0 p-2.5">
+                        <div className="absolute inset-0 p-2.5 z-20">
                           {lane.packedTasks.map(pt => {
                             const totalCols = timeScaleDays;
                             const leftPct = (pt.startIndex / totalCols) * 100;
@@ -511,22 +862,94 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                               <motion.div
                                 key={pt.task.id}
                                 layoutId={`timeline-bar-${pt.task.id}`}
-                                onClick={() => setSelectedTaskId(pt.task.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent triggering cell clicks!
+                                  setSelectedTaskId(pt.task.id);
+                                }}
                                 style={{
                                   left: `${leftPct}%`,
                                   width: `${widthPct}%`,
                                   top: `${topPx}px`
                                 }}
-                                className={`absolute h-8 rounded-lg shadow-3xs hover:shadow-2xs border px-2.5 flex items-center justify-between gap-2 cursor-pointer transition-all ${
+                                className={`absolute h-8 rounded-lg shadow-3xs hover:shadow-2xs border px-2 flex items-center justify-between gap-1.5 cursor-pointer transition-all ${
                                   isSelected 
                                     ? 'ring-2 ring-indigo-600 ring-offset-1 z-30 font-extrabold scale-[1.01]' 
                                     : 'z-10 hover:scale-[1.005]'
                                 } ${getTypeColorClasses(pt.task.type)}`}
                               >
-                                <span className="text-[10px] font-mono truncate font-bold uppercase flex-1">{pt.task.title}</span>
-                                
-                                {pt.isOverdue && (
-                                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-red-200 animate-pulse" title="Schedule Overdue!" />
+                                {/* Left Quick Shift Button (only on selected task) */}
+                                {isSelected && onUpdateTask && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleShiftTask(pt.task, -1);
+                                    }}
+                                    className="p-0.5 rounded bg-black/20 hover:bg-black/40 text-white cursor-pointer transition-colors shrink-0"
+                                    title="Shift 1 Day Left (Snap to Grid)"
+                                  >
+                                    <ChevronLeft className="w-3 h-3" />
+                                  </button>
+                                )}
+
+                                {/* Task Priority Marker Dot & Icon */}
+                                <div className="flex items-center gap-1 min-w-0 flex-1">
+                                  <span 
+                                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                      pt.task.priority === 'critical' ? 'bg-red-350 animate-ping' :
+                                      pt.task.priority === 'high' ? 'bg-orange-300' :
+                                      pt.task.priority === 'medium' ? 'bg-blue-300' :
+                                      'bg-slate-300'
+                                    }`} 
+                                    title={`Priority: ${pt.task.priority}`}
+                                  />
+                                  <span className="text-[10px] font-mono truncate font-bold uppercase leading-none">{pt.task.title}</span>
+                                </div>
+
+                                {/* Right Info Section: Overdue alerts, Stage initials, Assignee Avatar Markers */}
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {pt.isOverdue && (
+                                    <AlertTriangle className="w-3 h-3 text-red-250 animate-pulse" title="Schedule Overdue!" />
+                                  )}
+                                  
+                                  {/* Stage abbreviation marker */}
+                                  <span className="text-[8px] font-bold px-1 bg-white/20 text-white rounded uppercase">
+                                    {pt.task.stageId.substring(0, 3)}
+                                  </span>
+
+                                  {/* Assignee Avatar Marker */}
+                                  {pt.task.assignedTo && (
+                                    <div 
+                                      className="w-4 h-4 rounded-full bg-white/35 flex items-center justify-center text-[7px] font-extrabold text-white border border-white/50 overflow-hidden shrink-0"
+                                      title={`Assignee: ${users.find(u => u.id === pt.task.assignedTo)?.name || 'Unknown'}`}
+                                    >
+                                      {users.find(u => u.id === pt.task.assignedTo)?.avatarUrl ? (
+                                        <img 
+                                          src={users.find(u => u.id === pt.task.assignedTo)?.avatarUrl} 
+                                          alt="Avatar"
+                                          referrerPolicy="no-referrer"
+                                          className="w-full h-full object-cover" 
+                                        />
+                                      ) : (
+                                        users.find(u => u.id === pt.task.assignedTo)?.name.substring(0, 2).toUpperCase() || '??'
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Right Quick Shift Button (only on selected task) */}
+                                {isSelected && onUpdateTask && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleShiftTask(pt.task, 1);
+                                    }}
+                                    className="p-0.5 rounded bg-black/20 hover:bg-black/40 text-white cursor-pointer transition-colors shrink-0"
+                                    title="Shift 1 Day Right (Snap to Grid)"
+                                  >
+                                    <ChevronRight className="w-3 h-3" />
+                                  </button>
                                 )}
                               </motion.div>
                             );
@@ -629,14 +1052,157 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   <ExternalLink className="w-3.5 h-3.5" />
                   Open Task Workspace
                 </button>
+
+                {/* Snap to Grid Interactive Action Panel */}
+                {onUpdateTask && (
+                  <div className="pt-3.5 border-t border-slate-150 space-y-3.5 animate-fadeIn">
+                    <span className="text-[9px] uppercase font-bold tracking-widest text-slate-400 block font-mono">
+                      Gantt Grid Adjusters (Snap Mode)
+                    </span>
+                    
+                    {/* Shift Row */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-[9px] font-bold text-slate-500 uppercase font-mono">
+                        <span>Slide Task Position</span>
+                        <span className="text-indigo-600 bg-indigo-50 px-1 rounded">Shift Date</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleShiftTask(selectedTaskObj, -3)}
+                          className="px-1 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-bold rounded text-slate-600 cursor-pointer transition-colors"
+                          title="Shift 3 days earlier"
+                        >
+                          -3d
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleShiftTask(selectedTaskObj, -1)}
+                          className="px-1 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-bold rounded text-slate-600 cursor-pointer transition-colors"
+                          title="Shift 1 day earlier"
+                        >
+                          -1d
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleShiftTask(selectedTaskObj, 1)}
+                          className="px-1 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-bold rounded text-slate-600 cursor-pointer transition-colors"
+                          title="Shift 1 day later"
+                        >
+                          +1d
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleShiftTask(selectedTaskObj, 3)}
+                          className="px-1 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-bold rounded text-slate-600 cursor-pointer transition-colors"
+                          title="Shift 3 days later"
+                        >
+                          +3d
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Resize Duration Row */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-[9px] font-bold text-slate-500 uppercase font-mono">
+                        <span>Extend/Contract Duration</span>
+                        <span className="text-amber-600 bg-amber-50 px-1 rounded">Adjust End</span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleResizeTask(selectedTaskObj, -3)}
+                          className="px-1 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-bold rounded text-slate-600 cursor-pointer transition-colors"
+                          title="Reduce task length by 3 days"
+                        >
+                          -3d
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleResizeTask(selectedTaskObj, -1)}
+                          className="px-1 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-bold rounded text-slate-600 cursor-pointer transition-colors"
+                          title="Reduce task length by 1 day"
+                        >
+                          -1d
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleResizeTask(selectedTaskObj, 1)}
+                          className="px-1 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-bold rounded text-slate-600 cursor-pointer transition-colors"
+                          title="Extend task length by 1 day"
+                        >
+                          +1d
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleResizeTask(selectedTaskObj, 3)}
+                          className="px-1 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-bold rounded text-slate-600 cursor-pointer transition-colors"
+                          title="Extend task length by 3 days"
+                        >
+                          +3d
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             ) : (
               <div className="text-center py-12 text-slate-400">
                 <LayoutGrid className="w-10 h-10 mx-auto stroke-1 text-slate-300 mb-2" />
-                <p className="text-xs font-medium">Select a colored timeline bar to audit its schedule properties.</p>
+                <p className="text-xs font-medium">Select a colored timeline bar to audit or adjust its schedule properties.</p>
               </div>
             )}
           </AnimatePresence>
+        </div>
+
+        {/* Task Markers & Milestones List */}
+        <div className="bg-slate-50/50 border border-slate-150 rounded-xl p-4 space-y-3 mt-4">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] uppercase font-bold tracking-widest text-slate-500 font-mono">
+              Active Timeline Milestones ({taskMarkers.length})
+            </span>
+            <button
+              onClick={() => setShowAddMarker(true)}
+              className="text-[9px] text-indigo-600 hover:underline font-bold cursor-pointer"
+            >
+              + Add Marker
+            </button>
+          </div>
+          
+          <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
+            {taskMarkers.map(m => (
+              <div
+                key={m.id}
+                onMouseEnter={() => setHoveredMarkerId(m.id)}
+                onMouseLeave={() => setHoveredMarkerId(null)}
+                className={`p-2 rounded-lg bg-white border text-[10px] flex items-center justify-between gap-1.5 transition-all ${
+                  hoveredMarkerId === m.id ? 'border-indigo-400 shadow-3xs' : 'border-slate-150'
+                }`}
+              >
+                <div className="flex items-start gap-1.5 min-w-0">
+                  <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 animate-pulse" style={{ backgroundColor: m.color }} />
+                  <div className="min-w-0">
+                    <span className="font-bold text-slate-850 block truncate" title={m.title}>{m.title}</span>
+                    <span className="text-[8px] font-mono text-slate-400 font-bold block">{m.date}</span>
+                    {m.description && (
+                      <span className="text-[8px] text-slate-500 line-clamp-1 mt-0.5">{m.description}</span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteMarker(m.id)}
+                  className="p-1 text-slate-400 hover:text-red-500 rounded hover:bg-slate-50 transition-colors cursor-pointer shrink-0"
+                  title="Remove Marker"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+            {taskMarkers.length === 0 && (
+              <p className="text-[9px] text-slate-400 italic text-center py-2">No milestones pinned to the schedule.</p>
+            )}
+          </div>
         </div>
 
         {/* Lower Timeline Statistics */}

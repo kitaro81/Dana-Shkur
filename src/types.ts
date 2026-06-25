@@ -59,6 +59,8 @@ export interface Task {
   quickNote?: string;
   assignedUserIds?: string[];
   disciplines?: TaskType[];
+  storyPoints?: number;
+  tShirtSize?: 'S' | 'M' | 'L' | 'XL';
 }
 
 export interface Comment {
@@ -110,6 +112,16 @@ export interface VisualSettings {
   welcomeModalContent?: string;
   welcomeModalButtonText?: string;
   activeMethodology?: string;
+  theme?: 'light' | 'dark';
+  workspaceName?: string;
+  primaryColor?: 'indigo' | 'emerald' | 'amber' | 'rose' | 'violet' | 'cyan';
+  cardCompactness?: 'compact' | 'comfortable' | 'spacious';
+  agileSprintDurationWeeks?: number;
+  agileSprintGoal?: string;
+  agileEstimationMetric?: 'story_points' | 'hours' | 't_shirt';
+  agileTargetCapacity?: number;
+  agileRequireStoryPoints?: boolean;
+  agileEnforceSprintAssignment?: boolean;
 }
 
 export interface ReportTemplateSettings {

@@ -17,6 +17,12 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { NotificationCenter } from './components/NotificationCenter';
 import { CalendarView } from './components/CalendarView';
 import { ArchivePanel } from './components/ArchivePanel';
+import { TeamLoginPortal } from './components/TeamLoginPortal';
+import { CommandPalette } from './components/CommandPalette';
+import { ResourceLoadPanel } from './components/ResourceLoadPanel';
+import { MyOverviewPanel } from './components/MyOverviewPanel';
+import { Breadcrumbs } from './components/Breadcrumbs';
+import { printReportHTML } from './utils/reports';
 import { 
   LayoutDashboard, 
   BarChart3, 
@@ -29,11 +35,106 @@ import {
   CheckCircle2,
   X,
   FileSpreadsheet,
-  Megaphone
+  Megaphone,
+  ChevronDown,
+  LogOut,
+  FileText,
+  Check,
+  LogIn,
+  Shield,
+  Clock,
+  ArrowRight,
+  Search,
+  Command,
+  Eye,
+  EyeOff,
+  Calendar,
+  Archive
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
+  const getBrandClasses = () => {
+    const color = visualSettings.primaryColor || 'indigo';
+    const mapping = {
+      indigo: {
+        text: 'text-indigo-600',
+        textSoft: 'text-indigo-700 dark:text-indigo-400',
+        bg: 'bg-indigo-600 dark:bg-indigo-500',
+        bgHover: 'hover:bg-indigo-700 dark:hover:bg-indigo-600',
+        bgSoft: 'bg-indigo-50 dark:bg-indigo-950/40',
+        bgSoftHover: 'hover:bg-indigo-100/80 dark:hover:bg-indigo-900/40',
+        borderSoft: 'border-indigo-100 dark:border-indigo-900/30',
+        ring: 'focus:ring-indigo-100 dark:focus:ring-indigo-950/40',
+        borderFocus: 'focus:border-indigo-500 dark:focus:border-indigo-400',
+        accentText: 'text-indigo-600 dark:text-indigo-400'
+      },
+      emerald: {
+        text: 'text-emerald-600',
+        textSoft: 'text-emerald-700 dark:text-emerald-400',
+        bg: 'bg-emerald-600 dark:bg-emerald-500',
+        bgHover: 'hover:bg-emerald-700 dark:hover:bg-emerald-600',
+        bgSoft: 'bg-emerald-50 dark:bg-emerald-950/40',
+        bgSoftHover: 'hover:bg-emerald-100/80 dark:hover:bg-emerald-900/40',
+        borderSoft: 'border-emerald-100 dark:border-emerald-900/30',
+        ring: 'focus:ring-emerald-100 dark:focus:ring-emerald-950/40',
+        borderFocus: 'focus:border-emerald-500 dark:focus:border-emerald-400',
+        accentText: 'text-emerald-600 dark:text-emerald-400'
+      },
+      amber: {
+        text: 'text-amber-600',
+        textSoft: 'text-amber-700 dark:text-amber-400',
+        bg: 'bg-amber-600 dark:bg-amber-500',
+        bgHover: 'hover:bg-amber-700 dark:hover:bg-amber-600',
+        bgSoft: 'bg-amber-50 dark:bg-amber-950/40',
+        bgSoftHover: 'hover:bg-amber-100/80 dark:hover:bg-amber-900/40',
+        borderSoft: 'border-amber-100 dark:border-amber-900/30',
+        ring: 'focus:ring-amber-100 dark:focus:ring-amber-950/40',
+        borderFocus: 'focus:border-amber-500 dark:focus:border-amber-400',
+        accentText: 'text-amber-600 dark:text-amber-400'
+      },
+      rose: {
+        text: 'text-rose-600',
+        textSoft: 'text-rose-700 dark:text-rose-400',
+        bg: 'bg-rose-600 dark:bg-rose-500',
+        bgHover: 'hover:bg-rose-700 dark:hover:bg-rose-600',
+        bgSoft: 'bg-rose-50 dark:bg-rose-950/40',
+        bgSoftHover: 'hover:bg-rose-100/80 dark:hover:bg-rose-900/40',
+        borderSoft: 'border-rose-100 dark:border-rose-900/30',
+        ring: 'focus:ring-rose-100 dark:focus:ring-rose-950/40',
+        borderFocus: 'focus:border-rose-500 dark:focus:border-rose-400',
+        accentText: 'text-rose-600 dark:text-rose-400'
+      },
+      violet: {
+        text: 'text-violet-600',
+        textSoft: 'text-violet-700 dark:text-violet-400',
+        bg: 'bg-violet-600 dark:bg-violet-500',
+        bgHover: 'hover:bg-violet-700 dark:hover:bg-violet-600',
+        bgSoft: 'bg-violet-50 dark:bg-violet-950/40',
+        bgSoftHover: 'hover:bg-violet-100/80 dark:hover:bg-violet-900/40',
+        borderSoft: 'border-violet-100 dark:border-violet-900/30',
+        ring: 'focus:ring-violet-100 dark:focus:ring-violet-950/40',
+        borderFocus: 'focus:border-violet-500 dark:focus:border-violet-400',
+        accentText: 'text-violet-600 dark:text-violet-400'
+      },
+      cyan: {
+        text: 'text-cyan-600',
+        textSoft: 'text-cyan-700 dark:text-cyan-400',
+        bg: 'bg-cyan-600 dark:bg-cyan-500',
+        bgHover: 'hover:bg-cyan-700 dark:hover:bg-cyan-600',
+        bgSoft: 'bg-cyan-50 dark:bg-cyan-950/40',
+        bgSoftHover: 'hover:bg-cyan-100/80 dark:hover:bg-cyan-900/40',
+        borderSoft: 'border-cyan-100 dark:border-cyan-900/30',
+        ring: 'focus:ring-cyan-100 dark:focus:ring-cyan-950/40',
+        borderFocus: 'focus:border-cyan-500 dark:focus:border-cyan-400',
+        accentText: 'text-cyan-600 dark:text-cyan-400'
+      },
+    };
+    return mapping[color] || mapping.indigo;
+  };
+
+  // brand will be initialized after visualSettings state is defined
+
   // --- Persistent Storage State ---
   const [projects, setProjects] = useState<Project[]>(() => {
     const local = localStorage.getItem('kanban_projects');
@@ -78,7 +179,7 @@ export default function App() {
   // --- Visual & Report Custom Template Settings ---
   const [visualSettings, setVisualSettings] = useState<VisualSettings>(() => {
     const saved = localStorage.getItem('visualSettings');
-    const defaults = {
+    const defaults: VisualSettings = {
       showCalendarTab: true,
       showReportsTab: true,
       showArchiveTab: true,
@@ -91,6 +192,16 @@ export default function App() {
       welcomeModalContent: 'We have updated our internal design standard submission procedures. Please ensure all drawings and calculations are logged prior to initiating Peer & Q/C Reviews.',
       welcomeModalButtonText: 'Acknowledge & Proceed',
       activeMethodology: 'waterfall',
+      theme: 'light',
+      workspaceName: 'Nexus Design Ops',
+      primaryColor: 'indigo',
+      cardCompactness: 'comfortable',
+      agileSprintDurationWeeks: 2,
+      agileSprintGoal: 'Complete sprint iterations and delivery artifacts',
+      agileEstimationMetric: 'story_points',
+      agileTargetCapacity: 40,
+      agileRequireStoryPoints: false,
+      agileEnforceSprintAssignment: false,
     };
     if (saved) {
       try {
@@ -101,6 +212,8 @@ export default function App() {
     }
     return defaults;
   });
+
+  const brand = getBrandClasses();
 
   const [reportTemplateSettings, setReportTemplateSettings] = useState<ReportTemplateSettings>(() => {
     const saved = localStorage.getItem('reportTemplateSettings');
@@ -128,6 +241,11 @@ export default function App() {
     localStorage.setItem('visualSettings', JSON.stringify(newSettings));
   };
 
+  useEffect(() => {
+    // Force light mode
+    document.documentElement.classList.remove('dark');
+  }, []);
+
   const handleUpdateReportTemplateSettings = (newSettings: ReportTemplateSettings) => {
     setReportTemplateSettings(newSettings);
     localStorage.setItem('reportTemplateSettings', JSON.stringify(newSettings));
@@ -138,7 +256,13 @@ export default function App() {
   };
 
   // --- App View State ---
-  const [activeTab, setActiveTab] = useState<'board' | 'reports' | 'calendar' | 'admin' | 'archive'>('board');
+  const [activeTab, setActiveTab] = useState<'board' | 'reports' | 'calendar' | 'admin' | 'archive' | 'resource_load' | 'my_overview'>('board');
+  const [showBreadcrumbs, setShowBreadcrumbs] = useState<boolean>(() => {
+    const saved = localStorage.getItem('show_breadcrumbs');
+    return saved !== 'false';
+  });
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [forceOpenAddTask, setForceOpenAddTask] = useState(false);
 
   // Auto-switch away from tabs that are turned off by the admin
   useEffect(() => {
@@ -176,8 +300,19 @@ export default function App() {
   
   // --- Active Session User ---
   const [currentUser, setCurrentUser] = useState<User>(() => {
+    const saved = localStorage.getItem('nexus_current_user_id');
+    if (saved) {
+      const match = INITIAL_USERS.find(u => u.id === saved);
+      if (match) return match;
+    }
     return INITIAL_USERS[0]; // defaults to Dana Shkur (Admin)
   });
+
+  const [isLoggedOut, setIsLoggedOut] = useState<boolean>(() => {
+    return localStorage.getItem('nexus_logged_out') === 'true';
+  });
+
+  const [showProfilePopover, setShowProfilePopover] = useState(false);
 
   // --- Dynamic Permissions and Archiving Flow ---
   const DEFAULT_FLOW_PERMISSIONS: FlowPermissions = {
@@ -250,6 +385,83 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('kanban_task_templates', JSON.stringify(taskTemplates));
   }, [taskTemplates]);
+
+  // --- Global Keyboard Shortcuts for Power Users ---
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Ctrl+K or Cmd+K: Toggle Command Palette
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+        return;
+      }
+
+      // 2. Escape: Close active modals
+      if (e.key === 'Escape') {
+        if (isCommandPaletteOpen) {
+          setIsCommandPaletteOpen(false);
+          e.preventDefault();
+          return;
+        }
+        if (selectedTaskId) {
+          setSelectedTaskId(null);
+          e.preventDefault();
+          return;
+        }
+        if (showWelcomeModal) {
+          handleDismissWelcomeModal();
+          e.preventDefault();
+          return;
+        }
+        if (showNotificationCenter) {
+          setShowNotificationCenter(false);
+          e.preventDefault();
+          return;
+        }
+        if (showProfilePopover) {
+          setShowProfilePopover(false);
+          e.preventDefault();
+          return;
+        }
+      }
+
+      // 3. Alt + 1-5 direct navigation tabs (only if not typing in inputs/textareas)
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      if (!isInput && e.altKey) {
+        if (e.key === '1') {
+          e.preventDefault();
+          setActiveTab('board');
+        } else if (e.key === '2' && visualSettings.showReportsTab !== false) {
+          e.preventDefault();
+          setActiveTab('reports');
+        } else if (e.key === '3' && visualSettings.showCalendarTab !== false) {
+          e.preventDefault();
+          setActiveTab('calendar');
+        } else if (e.key === '4' && visualSettings.showArchiveTab !== false) {
+          e.preventDefault();
+          setActiveTab('archive');
+        } else if (e.key === '5') {
+          e.preventDefault();
+          setActiveTab('admin');
+        } else if (e.key.toLowerCase() === 'n') {
+          e.preventDefault();
+          setActiveTab('board');
+          setForceOpenAddTask(true);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    isCommandPaletteOpen,
+    selectedTaskId,
+    showWelcomeModal,
+    showNotificationCenter,
+    showProfilePopover,
+    visualSettings
+  ]);
 
   // --- Helper to trigger lightweight temporary slide toasts ---
   const triggerToast = (text: string, type: 'success' | 'info' | 'alert' = 'success') => {
@@ -542,8 +754,51 @@ export default function App() {
     const target = users.find(u => u.id === userId);
     if (target) {
       setCurrentUser(target);
+      localStorage.setItem('nexus_current_user_id', target.id);
       triggerToast(`Focussed user: ${target.name} (${target.role.replace('_', ' ')})`, 'info');
     }
+  };
+
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
+    setIsLoggedOut(false);
+    localStorage.setItem('nexus_current_user_id', user.id);
+    localStorage.setItem('nexus_logged_out', 'false');
+    triggerToast(`Welcome back, ${user.name}! Authenticated successfully.`, 'success');
+  };
+
+  const handleLogout = () => {
+    setIsLoggedOut(true);
+    localStorage.setItem('nexus_logged_out', 'true');
+    setShowProfilePopover(false);
+    triggerToast('Logged out of workspace session.', 'info');
+  };
+
+  const handleExportAssignedTasksPDF = (userToExport: User) => {
+    // Filter tasks assigned to this user
+    const userTasks = tasks.filter(t => 
+      t.assignedTo === userToExport.id || 
+      (t.assignedUserIds && t.assignedUserIds.includes(userToExport.id))
+    );
+    
+    if (userTasks.length === 0) {
+      triggerToast(`No active tasks currently assigned to ${userToExport.name}.`, 'info');
+      return;
+    }
+    
+    const durationLabel = `Assigned Tasks Portfolio for ${userToExport.name}`;
+    const reportSettings = {
+      reportTitle: `Individual Assignment Portfolio - ${userToExport.name}`,
+      companyName: `Nexus Design Ops`,
+      accentColor: `#4f46e5`,
+      includeStatCards: true,
+      includeDisciplineBreakdown: true,
+      includeTaskDescription: true,
+      footerText: `Design Project Kanban Ledger. Generated for ${userToExport.name} on ${new Date().toLocaleDateString()}.`
+    };
+
+    printReportHTML(userTasks, activeProject, users, stages, durationLabel, reportSettings);
+    triggerToast(`PDF Report generated for ${userToExport.name}'s assigned tasks.`, 'success');
   };
 
   const isTeamMember = currentUser.role !== 'admin' && currentUser.role !== 'viewer';
@@ -657,8 +912,43 @@ export default function App() {
     n => !n.read && (n.userId === 'all' || n.userId === currentUser.email || n.userId === 'user-admin')
   ).length;
 
+  const currentUserAssignedTasks = tasks.filter(t => 
+    t.assignedTo === currentUser.id || 
+    (t.assignedUserIds && t.assignedUserIds.includes(currentUser.id))
+  );
+
+  if (isLoggedOut) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans transition-colors">
+        {/* Toast Overlay Container */}
+        <div className="fixed top-4 right-4 z-50 pointer-events-none space-y-2">
+          <AnimatePresence>
+            {toasts.map(toast => (
+              <motion.div
+                initial={{ opacity: 0, x: 50, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 50, scale: 0.9 }}
+                key={toast.id}
+                className={`p-3.5 rounded-lg shadow-lg flex items-center gap-2.5 max-w-sm pointer-events-auto border ${
+                  toast.type === 'success' ? 'bg-[#1e293b] text-[#34d399] border-[#34d399]/10' :
+                  toast.type === 'alert' ? 'bg-rose-900 text-rose-100 border-rose-800' :
+                  'bg-slate-900 text-amber-100 border-amber-800'
+                }`}
+              >
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <span className="text-xs font-bold font-mono tracking-tight">{toast.text}</span>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+
+        <TeamLoginPortal users={users} onLogin={handleLogin} />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors">
       
       {/* Toast Overlay Container */}
       <div className="fixed top-4 right-4 z-50 pointer-events-none space-y-2">
@@ -683,28 +973,175 @@ export default function App() {
       </div>
 
       {/* TOP DECK HEADER BAR */}
-      <header className="h-14 border-b border-slate-200 bg-white flex items-center justify-between sticky top-0 z-40">
+      <header className="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between sticky top-0 z-40 transition-colors">
         <div className="px-4 justify-between sm:px-6 w-full flex items-center">
-          <div className="flex items-center gap-2">
-            <h1 className="text-sm font-semibold tracking-tight text-slate-900">Nexus Design Ops</h1>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">{visualSettings.workspaceName || 'Nexus Design Ops'}</h1>
+            </div>
+            
+            {/* Desktop Command Palette Trigger */}
+            <button
+              onClick={() => setIsCommandPaletteOpen(true)}
+              className="hidden md:flex items-center gap-2 px-2.5 py-1 text-[11px] text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 transition-all cursor-pointer w-52 justify-between"
+              title="Open Command Palette (Ctrl+K)"
+            >
+              <div className="flex items-center gap-1.5">
+                <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                <span>Search or jump to...</span>
+              </div>
+              <kbd className="px-1.5 py-0.5 text-[8px] font-mono font-bold bg-white dark:bg-slate-900 text-slate-400 border border-slate-200 dark:border-slate-800 rounded select-none shadow-2xs">
+                Ctrl+K
+              </kbd>
+            </button>
           </div>
 
           <div className="flex items-center gap-2.5">
-            {/* PERSONA SWITCHER */}
-            <div className="flex items-center gap-1 bg-slate-50 border border-slate-150 px-2 py-1 rounded text-slate-600 hover:bg-slate-100 transition-colors">
-              <span className="hidden sm:inline text-[9px] font-medium text-slate-400 uppercase tracking-wider">Role Temp:</span>
-              <select
-                className="text-[10px] font-medium text-slate-600 uppercase bg-transparent border-none focus:outline-none cursor-pointer"
-                value={currentUser.id}
-                onChange={(e) => handleSwitchSessionUser(e.target.value)}
+            {/* INTERACTIVE PROFILE SWITCHER & PORTAL */}
+            <div className="relative">
+              <button
+                onClick={() => setShowProfilePopover(!showProfilePopover)}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-all text-left focus:outline-none cursor-pointer"
               >
-                {users.map(u => (
-                  <option key={u.id} value={u.id} className="text-slate-900 font-sans font-normal">
-                    {u.name} ({u.role.replace('_', ' ')}){u.deactivated ? ' [DEACTIVATED]' : ''}
-                  </option>
-                ))}
-              </select>
+                {currentUser.avatarUrl ? (
+                  <img 
+                    src={currentUser.avatarUrl} 
+                    alt={currentUser.name} 
+                    className="w-5 h-5 rounded-full object-cover border border-slate-300" 
+                  />
+                ) : (
+                  <div className="w-5 h-5 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-[10px] font-bold">
+                    {currentUser.name[0]}
+                  </div>
+                )}
+                <div className="hidden sm:flex flex-col">
+                  <span className="text-[10px] font-bold text-slate-700 leading-none">{currentUser.name}</span>
+                  <span className="text-[8px] text-slate-400 uppercase tracking-wider mt-0.5 leading-none font-mono">
+                    {currentUser.role.replace('_', ' ')}
+                  </span>
+                </div>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              </button>
+
+              <AnimatePresence>
+                {showProfilePopover && (
+                  <>
+                    {/* Backdrop cover to click away */}
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setShowProfilePopover(false)} 
+                    />
+                    
+                    {/* Popover Content */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-lg p-4 z-50 space-y-4"
+                    >
+                      {/* User Info Header */}
+                      <div className="flex items-start gap-3">
+                        {currentUser.avatarUrl ? (
+                          <img 
+                            src={currentUser.avatarUrl} 
+                            alt={currentUser.name} 
+                            className="w-10 h-10 rounded-full object-cover border border-slate-200" 
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-xs font-bold">
+                            {currentUser.name[0]}
+                          </div>
+                        )}
+                        <div className="space-y-1 min-w-0 text-left">
+                          <p className="text-xs font-bold text-slate-800 truncate">{currentUser.name}</p>
+                          <p className="text-[9px] text-slate-400 font-mono truncate">{currentUser.email}</p>
+                          
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            <span className="text-[7px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 border rounded-md leading-none bg-indigo-50 text-indigo-700 border-indigo-100">
+                              {currentUser.role.replace('_', ' ')}
+                            </span>
+                            {currentUser.discipline && currentUser.discipline !== 'other' && (
+                              <span className="text-[7px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 border rounded-md leading-none bg-emerald-50 text-emerald-700 border-emerald-100">
+                                {currentUser.discipline}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Stats Section */}
+                      <div className="bg-slate-50 border border-slate-100 p-2.5 rounded-lg text-left">
+                        <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Your Assignments:</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1 text-xs font-semibold text-slate-700">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{currentUserAssignedTasks.length} Active Tasks</span>
+                          </div>
+                          <span className="text-[9px] text-slate-400 font-mono">{activeProject?.code || 'No Project'}</span>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-slate-100 pt-3 space-y-2.5">
+                        {/* Export Assigned Tasks Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleExportAssignedTasksPDF(currentUser);
+                            setShowProfilePopover(false);
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-left bg-indigo-50 hover:bg-indigo-100/80 text-indigo-700 border border-indigo-100 rounded-lg transition-colors cursor-pointer text-xs font-bold"
+                        >
+                          <span className="flex items-center gap-2">
+                            <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>Export My Tasks (PDF)</span>
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Inline Persona Selector */}
+                        <div className="space-y-1 text-left">
+                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Swap Workspace Persona:</span>
+                          <select
+                            className="w-full text-xs font-medium text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg p-1.5 focus:outline-none cursor-pointer"
+                            value={currentUser.id}
+                            onChange={(e) => {
+                              handleSwitchSessionUser(e.target.value);
+                              setShowProfilePopover(false);
+                            }}
+                          >
+                            {users.map(u => (
+                              <option key={u.id} value={u.id}>
+                                {u.name} ({u.role.replace('_', ' ')}){u.deactivated ? ' [DEACTIVATED]' : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Logout Button */}
+                        <button
+                          type="button"
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-100 transition-colors cursor-pointer text-left"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Switch / Log Out Profile</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
+
+            {/* Mobile Command Palette Trigger */}
+            <button
+              onClick={() => setIsCommandPaletteOpen(true)}
+              className="md:hidden p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-all cursor-pointer"
+              title="Open Command Palette"
+            >
+              <Search className="w-4 h-4" />
+            </button>
 
             {/* Notification trigger bell */}
             <div className="relative">
@@ -757,52 +1194,100 @@ export default function App() {
           <div className="flex items-center gap-1">
             <button
               onClick={() => setActiveTab('board')}
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
+              className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
                 activeTab === 'board' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
               }`}
+              title="Board"
             >
-              Board
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Board</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('my_overview')}
+              className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'my_overview' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
+              }`}
+              title="My Overview"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">My Overview</span>
             </button>
             {visualSettings.showReportsTab && (
               <button
                 onClick={() => setActiveTab('reports')}
-                className={`px-3 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
+                className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
                   activeTab === 'reports' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
                 }`}
+                title="Reports"
               >
-                Reports
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Reports</span>
               </button>
             )}
             {visualSettings.showCalendarTab && (
               <button
                 onClick={() => setActiveTab('calendar')}
-                className={`px-3 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
+                className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
                   activeTab === 'calendar' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
                 }`}
+                title="Calendar"
               >
-                Calendar
+                <Calendar className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Calendar</span>
               </button>
             )}
             {visualSettings.showArchiveTab && (
               <button
                 onClick={() => setActiveTab('archive')}
-                className={`px-3 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
+                className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
                   activeTab === 'archive' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
                 }`}
+                title="Archive"
               >
-                Archive
+                <Archive className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Archive</span>
               </button>
             )}
+            <button
+              onClick={() => setActiveTab('resource_load')}
+              className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'resource_load' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
+              }`}
+              title="Resource Load"
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Resource Load</span>
+            </button>
             {currentUser.role === 'admin' && (
               <button
                 onClick={() => setActiveTab('admin')}
-                className={`px-3 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
+                className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
                   activeTab === 'admin' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
                 }`}
+                title="Settings"
               >
-                Settings
+                <Settings className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Settings</span>
               </button>
             )}
+
+            <span className="w-px h-4 bg-slate-250 mx-1.5 inline-block" />
+            <button
+              onClick={() => setShowBreadcrumbs(prev => {
+                const val = !prev;
+                localStorage.setItem('show_breadcrumbs', String(val));
+                return val;
+              })}
+              className={`px-2.5 py-1 text-xs font-bold rounded transition-all flex items-center gap-1.5 cursor-pointer border ${
+                showBreadcrumbs 
+                  ? 'bg-slate-100 border-slate-200 text-slate-750 hover:bg-slate-200' 
+                  : 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 animate-pulse'
+              }`}
+              title={showBreadcrumbs ? "Hide Navigation Trail (Full Screen Real Estate)" : "Show Navigation Trail"}
+            >
+              {showBreadcrumbs ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              <span className="hidden md:inline">{showBreadcrumbs ? "Hide Trail" : "Show Trail"}</span>
+            </button>
           </div>
 
         </div>
@@ -821,7 +1306,27 @@ export default function App() {
       )}
 
       {/* CORE CONTROLLER STAGE WORKSPACE */}
-      <main className="flex-1 p-4 sm:p-6 mx-auto w-full">
+      <main className="flex-1 px-1.5 py-3 sm:p-6 mx-auto w-full max-w-full">
+        <AnimatePresence initial={false}>
+          {showBreadcrumbs && (
+            <motion.div
+              initial={{ height: 0, opacity: 0, marginBottom: 0, overflow: 'hidden' }}
+              animate={{ height: 'auto', opacity: 1, marginBottom: 16 }}
+              exit={{ height: 0, opacity: 0, marginBottom: 0, overflow: 'hidden' }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+            >
+              <Breadcrumbs
+                projects={visibleProjects}
+                selectedProjectId={selectedProjectId}
+                onSelectProject={setSelectedProjectId}
+                activeTab={activeTab}
+                onSelectTab={setActiveTab}
+                currentUser={currentUser}
+                visualSettings={visualSettings}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -854,6 +1359,16 @@ export default function App() {
                 setShowArchivedTasks={setShowArchivedTasks}
                 showArchivedProjects={showArchivedProjects}
                 setShowArchivedProjects={setShowArchivedProjects}
+                forceOpenAddTask={forceOpenAddTask}
+                onResetForceOpenAddTask={() => setForceOpenAddTask(false)}
+                onUpdateStages={handleUpdateStages}
+                onUpdateVisualSettings={handleUpdateVisualSettings}
+                showBreadcrumbs={showBreadcrumbs}
+                onToggleBreadcrumbs={() => setShowBreadcrumbs(prev => {
+                  const val = !prev;
+                  localStorage.setItem('show_breadcrumbs', String(val));
+                  return val;
+                })}
               />
             )}
 
@@ -878,6 +1393,7 @@ export default function App() {
                 selectedProjectId={selectedProjectId}
                 onSelectTask={(id) => setSelectedTaskId(id)}
                 currentUser={currentUser}
+                onUpdateTask={handleUpdateTaskDetails}
               />
             )}
 
@@ -923,6 +1439,27 @@ export default function App() {
                 onToggleArchiveProject={handleToggleArchiveProject}
                 showArchivedProjects={showArchivedProjects}
                 setShowArchivedProjects={setShowArchivedProjects}
+                tasks={tasks}
+              />
+            )}
+
+            {activeTab === 'resource_load' && (
+              <ResourceLoadPanel
+                tasks={tasks}
+                users={users}
+                stages={stages}
+                projects={projects}
+              />
+            )}
+
+            {activeTab === 'my_overview' && (
+              <MyOverviewPanel
+                tasks={tasks}
+                projects={projects}
+                users={users}
+                stages={stages}
+                currentUser={currentUser}
+                onSelectTask={(id) => setSelectedTaskId(id)}
               />
             )}
           </motion.div>
@@ -998,6 +1535,32 @@ export default function App() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* GLOBAL COMMAND PALETTE */}
+      <AnimatePresence>
+        {isCommandPaletteOpen && (
+          <CommandPalette
+            isOpen={isCommandPaletteOpen}
+            onClose={() => setIsCommandPaletteOpen(false)}
+            tasks={tasks}
+            projects={projects}
+            users={users}
+            onSelectTask={(taskId) => {
+              setSelectedTaskId(taskId);
+              setIsCommandPaletteOpen(false);
+            }}
+            onSelectTab={(tab) => {
+              setActiveTab(tab);
+              setIsCommandPaletteOpen(false);
+            }}
+            onTriggerAddTask={() => {
+              setForceOpenAddTask(true);
+              setIsCommandPaletteOpen(false);
+            }}
+            currentUser={currentUser}
+          />
         )}
       </AnimatePresence>
 

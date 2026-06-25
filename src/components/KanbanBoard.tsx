@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Task, Project, User, WorkflowStage, TaskType, Label, VisualSettings, TaskTemplate } from '../types';
-import { Plus, Search, Filter, AlertTriangle, ArrowRight, Clock, User as UserIcon, Archive, Link, FileText, Check } from 'lucide-react';
+import { Plus, Search, Filter, AlertTriangle, ArrowRight, Clock, User as UserIcon, Archive, Link, FileText, Check, Download, Table, GripVertical, Compass, Layers, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface KanbanBoardProps {
   project: Project | null;
@@ -17,6 +19,12 @@ interface KanbanBoardProps {
   onSelectTask: (taskId: string) => void;
   onArchiveCompletedTasks?: (projectId: string) => void;
   onUpdateTask?: (updatedTask: Task) => void;
+  forceOpenAddTask?: boolean;
+  onResetForceOpenAddTask?: () => void;
+  onUpdateStages?: (stages: WorkflowStage[]) => void;
+  onUpdateVisualSettings?: (settings: VisualSettings) => void;
+  showBreadcrumbs?: boolean;
+  onToggleBreadcrumbs?: () => void;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -33,6 +41,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onSelectTask,
   onArchiveCompletedTasks,
   onUpdateTask,
+  forceOpenAddTask,
+  onResetForceOpenAddTask,
+  onUpdateStages,
+  onUpdateVisualSettings,
+  showBreadcrumbs = true,
+  onToggleBreadcrumbs,
 }) => {
   const showPriority = visualSettings?.showTaskPriorityBadge !== false;
   const showOverdue = visualSettings?.showOverdueHighlight !== false;
@@ -43,6 +57,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const [selectedDiscipline, setSelectedDiscipline] = useState<TaskType | 'all'>('all');
   const [selectedLabelFilterId, setSelectedLabelFilterId] = useState<string>('all');
   
+  // Track collapsed stages in mobile horizontal list layout (default all expanded/false)
+  const [collapsedStages, setCollapsedStages] = useState<Record<string, boolean>>({});
+
+  const toggleStageCollapsed = (stageId: string) => {
+    setCollapsedStages(prev => ({
+      ...prev,
+      [stageId]: !prev[stageId]
+    }));
+  };
+  
   // Create task state
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -52,10 +76,22 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const [newAssignedTo, setNewAssignedTo] = useState('');
   const [newEstHours, setNewEstHours] = useState('16');
   const [newDueDate, setNewDueDate] = useState('');
+  const [sortBy, setSortBy] = useState<'custom' | 'priority' | 'date' | 'effort'>('custom');
+  const [newStoryPoints, setNewStoryPoints] = useState<number>(3);
+  const [newTShirtSize, setNewTShirtSize] = useState<'S' | 'M' | 'L' | 'XL'>('M');
 
   // Multiple select states for multi assignee/disciplines
   const [newAssignedUserIds, setNewAssignedUserIds] = useState<string[]>([]);
   const [newDisciplines, setNewDisciplines] = useState<TaskType[]>([]);
+
+  useEffect(() => {
+    if (forceOpenAddTask) {
+      setShowAddForm(true);
+      if (onResetForceOpenAddTask) {
+        onResetForceOpenAddTask();
+      }
+    }
+  }, [forceOpenAddTask, onResetForceOpenAddTask]);
 
   const isTeamMember = currentUser.role !== 'admin' && currentUser.role !== 'viewer';
 
@@ -73,6 +109,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const [editingNoteTaskId, setEditingNoteTaskId] = useState<string | null>(null);
   const [tempNoteText, setTempNoteText] = useState('');
   const [newLabelIds, setNewLabelIds] = useState<string[]>([]);
+  const [boardViewMode, setBoardViewMode] = useState<'pipeline' | 'methodology'>('pipeline');
+  const [localFeedback, setLocalFeedback] = useState<string | null>(null);
 
   if (!project) {
     return (
@@ -95,20 +133,64 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const [isDragOverBufferAfter, setIsDragOverBufferAfter] = useState<boolean>(false);
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [activeDragOverStageId, setActiveDragOverStageId] = useState<string | null>(null);
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     e.dataTransfer.setData('text/plain', taskId);
+    setDraggedTaskId(taskId);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragEnd = () => {
+    setDraggedTaskId(null);
+    setActiveDragOverStageId(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, stageId: string) => {
     e.preventDefault(); // mandatory to allow drop
+    if (activeDragOverStageId !== stageId) {
+      setActiveDragOverStageId(stageId);
+    }
+  };
+
+  const handleDragLeaveStage = (e: React.DragEvent) => {
+    // Only remove active highlight if we actually drag outside of the column container
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
+      setActiveDragOverStageId(null);
+    }
   };
 
   const handleDrop = (e: React.DragEvent, targetStageId: string) => {
     e.preventDefault();
+    setDraggedTaskId(null);
+    setActiveDragOverStageId(null);
     const taskId = e.dataTransfer.getData('text/plain');
     if (taskId) {
+      const taskObj = tasks.find(t => t.id === taskId);
+      const firstStageId = stages[0]?.id;
+
+      if (visualSettings?.agileRequireStoryPoints && targetStageId !== firstStageId) {
+        const metric = visualSettings.agileEstimationMetric || 'story_points';
+        let hasEstimation = false;
+        if (metric === 'hours') {
+          hasEstimation = !!taskObj?.estimatedHours;
+        } else if (metric === 't_shirt') {
+          hasEstimation = !!taskObj?.tShirtSize;
+        } else {
+          hasEstimation = !!taskObj?.storyPoints;
+        }
+
+        if (!hasEstimation) {
+          alert(`⚠️ Agile Guardrail: Mandatory Estimation is active. Please click to open this task card and assign ${metric === 'hours' ? 'Est. Hours' : metric === 't_shirt' ? 'T-Shirt Size' : 'Story Points'} before moving it from the backlog!`);
+          return;
+        }
+      }
       onUpdateTaskStage(taskId, targetStageId);
+      setSortBy('custom');
     }
   };
 
@@ -140,11 +222,32 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     const draggedTaskId = e.dataTransfer.getData('text/plain');
     if (!draggedTaskId || draggedTaskId === targetTask.id) return;
 
+    const taskObj = tasks.find(t => t.id === draggedTaskId);
+    const firstStageId = stages[0]?.id;
+
+    if (visualSettings?.agileRequireStoryPoints && targetTask.stageId !== firstStageId) {
+      const metric = visualSettings.agileEstimationMetric || 'story_points';
+      let hasEstimation = false;
+      if (metric === 'hours') {
+        hasEstimation = !!taskObj?.estimatedHours;
+      } else if (metric === 't_shirt') {
+        hasEstimation = !!taskObj?.tShirtSize;
+      } else {
+        hasEstimation = !!taskObj?.storyPoints;
+      }
+
+      if (!hasEstimation) {
+        alert(`⚠️ Agile Guardrail: Mandatory Estimation is active. Please click to open this task card and assign ${metric === 'hours' ? 'Est. Hours' : metric === 't_shirt' ? 'T-Shirt Size' : 'Story Points'} before moving it from the backlog!`);
+        return;
+      }
+    }
+
     const rect = e.currentTarget.getBoundingClientRect();
     const offset = e.clientY - rect.top;
     const isAfter = offset > rect.height / 2;
 
     onUpdateTaskStage(draggedTaskId, targetTask.stageId, targetTask.id, isAfter);
+    setSortBy('custom');
   };
 
   const handleSelectTemplate = (tplId: string) => {
@@ -192,6 +295,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       labelIds: newLabelIds,
       disciplines: disciplinesToSubmit,
       assignedUserIds: assigneesToSubmit,
+      storyPoints: newStoryPoints,
+      tShirtSize: newTShirtSize,
     });
 
     // Reset Form
@@ -205,6 +310,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     setNewLabelIds([]);
     setNewAssignedUserIds([]);
     setNewDisciplines([]);
+    setNewStoryPoints(3);
+    setNewTShirtSize('M');
     setShowAddForm(false);
   };
 
@@ -212,11 +319,177 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const lastStageId = stages[stages.length - 1]?.id || 'approved';
   const completedTasksCount = projectTasks.filter(t => t.stageId === lastStageId || t.stageId === 'approved').length;
 
+  const handleExportCSV = () => {
+    const headers = ['ID', 'Title', 'Description', 'Stage', 'Priority', 'Assigned To', 'Due Date', 'Type'];
+    const rows = filteredTasks.map(task => [
+      `"${task.id}"`,
+      `"${task.title.replace(/"/g, '""')}"`,
+      `"${task.description.replace(/"/g, '""').replace(/\n/g, ' ')}"`,
+      `"${stages.find(s => s.id === task.stageId)?.name || task.stageId}"`,
+      `"${task.priority}"`,
+      `"${users.filter(u => task.assignedUserIds?.includes(u.id)).map(u => u.name).join(', ') || 'Unassigned'}"`,
+      `"${task.dueDate}"`,
+      `"${task.type}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${project.name.replace(/\s+/g, '_')}_tasks_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const tableColumn = ["Title", "Stage", "Priority", "Assignees", "Due Date"];
+    const tableRows = filteredTasks.map(task => [
+      task.title,
+      stages.find(s => s.id === task.stageId)?.name || task.stageId,
+      task.priority,
+      users.filter(u => task.assignedUserIds?.includes(u.id)).map(u => u.name).join(', ') || 'Unassigned',
+      task.dueDate
+    ]);
+
+    doc.setFontSize(18);
+    doc.text(`${project.name} - Kanban Board Data`, 14, 20);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+    doc.text(`Total Tasks: ${filteredTasks.length}`, 14, 34);
+    
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 40,
+      theme: 'grid',
+      headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] },
+      alternateRowStyles: { fillColor: [249, 250, 251] },
+      styles: { fontSize: 8, cellPadding: 3 }
+    });
+    
+    doc.save(`${project.name.replace(/\s+/g, '_')}_tasks_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const handleApplyPresetInBoard = (presetType: 'waterfall' | 'agile' | 'simple') => {
+    let presetStages: WorkflowStage[] = [];
+    if (presetType === 'waterfall') {
+      presetStages = [
+        { id: 'planning', name: 'Planning & Feasibility', color: '#64748b', order: 0 },
+        { id: 'design', name: 'Core Drafting & Design', color: '#3b82f6', order: 1 },
+        { id: 'peer_review', name: 'Peer & Q/C Review', color: '#f59e0b', order: 2 },
+        { id: 'client_approval', name: 'Client Approval', color: '#8b5cf6', order: 3 },
+        { id: 'approved', name: 'Issued for Construction', color: '#10b981', order: 4 },
+      ];
+    } else if (presetType === 'agile') {
+      presetStages = [
+        { id: 'backlog', name: 'Backlog / To Do', color: '#475569', order: 0 },
+        { id: 'in_progress', name: 'Active Sprint', color: '#2563eb', order: 1 },
+        { id: 'code_review', name: 'QC & Code Review', color: '#db2777', order: 2 },
+        { id: 'testing', name: 'Testing & Validation', color: '#ca8a04', order: 3 },
+        { id: 'approved', name: 'Done / Delivered', color: '#059669', order: 4 },
+      ];
+    } else {
+      presetStages = [
+        { id: 'todo', name: 'Simple Tasks To Do', color: '#64748b', order: 0 },
+        { id: 'in_progress', name: 'Under Execution', color: '#3b82f6', order: 1 },
+        { id: 'blocked', name: 'Blocked / Delayed', color: '#ef4444', order: 2 },
+        { id: 'approved', name: 'Completed / Done', color: '#10b981', order: 3 },
+      ];
+    }
+    onUpdateStages?.(presetStages);
+    if (onUpdateVisualSettings && visualSettings) {
+      onUpdateVisualSettings({
+        ...visualSettings,
+        activeMethodology: presetType
+      });
+    }
+    setLocalFeedback(`Switched project delivery methodology to ${presetType === 'waterfall' ? 'Waterfall Sequential' : presetType === 'agile' ? 'Agile Scrum' : 'Simple Kanban'}! Stages populated.`);
+  };
+
+  const sprintStageId = stages.find(s => s.id.toLowerCase().includes('sprint') || s.id.toLowerCase().includes('progress'))?.id || stages[1]?.id || 'sprint';
+  const activeSprintTasks = tasks.filter(t => t.stageId === sprintStageId && !t.archived);
+  const metricName = visualSettings?.agileEstimationMetric === 'hours' ? 'Est. Hours' : visualSettings?.agileEstimationMetric === 't_shirt' ? 'T-Shirt Weight' : 'Story Points';
+  
+  let currentLoad = 0;
+  const tShirtMapping: Record<string, number> = { S: 1, M: 3, L: 5, XL: 8 };
+  if (visualSettings?.agileEstimationMetric === 'hours') {
+    currentLoad = activeSprintTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+  } else if (visualSettings?.agileEstimationMetric === 't_shirt') {
+    currentLoad = activeSprintTasks.reduce((sum, t) => sum + (tShirtMapping[t.tShirtSize || 'M'] || 3), 0);
+  } else {
+    currentLoad = activeSprintTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
+  }
+  const targetCapacity = visualSettings?.agileTargetCapacity || 30;
+  const loadPercentage = Math.min(100, Math.round((currentLoad / targetCapacity) * 100)) || 0;
+
   return (
     <div className="space-y-6">
       
-      {/* Search & Discipline Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-3xs">
+      {/* Segmented View Mode Toggle: Methodology vs Pipeline */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-1.5 rounded-xl border border-slate-200/80 shadow-3xs">
+        <div className="flex items-center gap-2">
+          <div className="p-1 bg-white rounded-lg border border-slate-200/60 flex items-center gap-1 shadow-3xs">
+            <button
+              onClick={() => setBoardViewMode('pipeline')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                boardViewMode === 'pipeline'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-850 hover:bg-slate-50'
+              }`}
+              title="Pipeline View"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Pipeline View</span>
+            </button>
+            <button
+              onClick={() => setBoardViewMode('methodology')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                boardViewMode === 'methodology'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-850 hover:bg-slate-50'
+              }`}
+              title="Methodology & Presets"
+            >
+              <Compass className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Methodology & Presets</span>
+            </button>
+          </div>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono ml-1 hidden md:inline">
+            Active Delivery Standard: <span className="text-indigo-600 font-extrabold">{visualSettings?.activeMethodology || 'waterfall'}</span>
+          </span>
+        </div>
+
+        {/* Dynamic status or helper text on current selection */}
+        <div className="text-[11px] text-slate-500 font-medium select-none px-2 flex items-center gap-1.5">
+          {boardViewMode === 'pipeline' ? (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Flowing {filteredTasks.length} design tickets across {stages.length} pipeline phases</span>
+            </>
+          ) : (
+            <>
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+              <span>Standardize project stage structures & iteration rules</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {localFeedback && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2.5 rounded-lg text-xs font-semibold flex items-center justify-between shadow-3xs animate-fadeIn">
+          <span>🎉 {localFeedback}</span>
+          <button onClick={() => setLocalFeedback(null)} className="text-emerald-500 hover:text-emerald-750 cursor-pointer">✕</button>
+        </div>
+      )}
+
+      {boardViewMode === 'pipeline' ? (
+        <>
+          {/* Search & Discipline Filter Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-3xs">
         
         {/* Search */}
         <div className="relative flex-1 max-w-xs">
@@ -240,28 +513,43 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             <>
               <button
                 onClick={() => setSelectedDiscipline('all')}
-                className={`px-2.5 py-1 text-xs font-medium rounded border transition-colors cursor-pointer ${
+                className={`px-2.5 py-1 text-xs font-medium rounded border transition-colors cursor-pointer flex items-center gap-1 ${
                   selectedDiscipline === 'all' 
                     ? 'bg-indigo-50 border-indigo-100 text-indigo-700' 
                     : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
                 }`}
+                title="All Disciplines"
               >
-                All Disciplines
+                <span>🌐</span>
+                <span className="hidden sm:inline">All</span>
               </button>
 
-              {(['architecture', 'structure', 'electric', 'mechanical', 'other'] as TaskType[]).map(disc => (
-                <button
-                  key={disc}
-                  onClick={() => setSelectedDiscipline(disc)}
-                  className={`px-2.5 py-1 text-xs font-medium rounded border transition-colors capitalize cursor-pointer ${
-                    selectedDiscipline === disc 
-                      ? 'bg-indigo-50 border-indigo-100 text-indigo-700' 
-                      : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
-                  }`}
-                >
-                  {disc}
-                </button>
-              ))}
+              {(['architecture', 'structure', 'electric', 'mechanical', 'other'] as TaskType[]).map(disc => {
+                const getDisciplineIcon = (d: TaskType) => {
+                  switch (d) {
+                    case 'architecture': return '🏛️';
+                    case 'structure': return '🏗️';
+                    case 'electric': return '⚡';
+                    case 'mechanical': return '⚙️';
+                    default: return '📁';
+                  }
+                };
+                return (
+                  <button
+                    key={disc}
+                    onClick={() => setSelectedDiscipline(disc)}
+                    className={`px-2.5 py-1 text-xs font-medium rounded border transition-colors capitalize cursor-pointer flex items-center gap-1 ${
+                      selectedDiscipline === disc 
+                        ? 'bg-indigo-50 border-indigo-100 text-indigo-700' 
+                        : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                    }`}
+                    title={disc}
+                  >
+                    <span>{getDisciplineIcon(disc)}</span>
+                    <span className="hidden sm:inline">{disc}</span>
+                  </button>
+                );
+              })}
             </>
           )}
 
@@ -279,23 +567,74 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               </option>
             ))}
           </select>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="px-2 py-1 text-xs font-semibold rounded border border-slate-200 text-slate-600 bg-white hover:border-slate-300 focus:outline-none cursor-pointer"
+            title="Sort tasks within columns"
+          >
+            <option value="custom">↕️ Drag & Drop Sequence</option>
+            <option value="priority">🔥 Sort by Priority</option>
+            <option value="date">📅 Sort by Due Date</option>
+            <option value="effort">💪 Sort by Effort ({visualSettings?.agileEstimationMetric === 'hours' ? 'Est. Hours' : visualSettings?.agileEstimationMetric === 't_shirt' ? 'T-Shirt Weight' : 'Story Points'})</option>
+          </select>
         </div>
 
         {/* Action Buttons Group */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Export Utilities */}
+          <div className="flex items-center gap-1.5 border-r border-slate-200 pr-3 mr-1">
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 rounded text-[10px] font-bold transition-all cursor-pointer shadow-3xs hover:shadow-2xs active:scale-95 group"
+              title="Export visible tasks to CSV"
+            >
+              <Table className="w-3.5 h-3.5 text-emerald-500 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline">CSV</span>
+            </button>
+            <button
+              onClick={handleExportPDF}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-slate-200 hover:border-red-300 hover:bg-red-50 text-slate-600 hover:text-red-700 rounded text-[10px] font-bold transition-all cursor-pointer shadow-3xs hover:shadow-2xs active:scale-95 group"
+              title="Export visible tasks to PDF"
+            >
+              <FileText className="w-3.5 h-3.5 text-red-500 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline">PDF</span>
+            </button>
+          </div>
+
+          {/* Real estate Trail Toggle */}
+          {onToggleBreadcrumbs && (
+            <div className="flex items-center gap-1.5 border-r border-slate-200 pr-3 mr-1">
+              <button
+                onClick={onToggleBreadcrumbs}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 border text-[10px] font-bold rounded transition-all cursor-pointer shadow-3xs hover:shadow-2xs active:scale-95 ${
+                  showBreadcrumbs 
+                    ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200' 
+                    : 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 animate-pulse'
+                }`}
+                title={showBreadcrumbs ? "Hide Navigation Trail (Reclaim Screen Space)" : "Show Navigation Trail"}
+              >
+                {showBreadcrumbs ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                <span className="hidden sm:inline">{showBreadcrumbs ? "Hide Trail" : "Show Trail"}</span>
+              </button>
+            </div>
+          )}
+
           {!isViewer && onArchiveCompletedTasks && (
             <button
               onClick={() => onArchiveCompletedTasks(project.id)}
               disabled={completedTasksCount === 0}
-              className={`flex items-center gap-1.5 px-3 py-1.5 border rounded text-xs font-medium transition-all select-none ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border rounded text-xs font-medium transition-all select-none ${
                 completedTasksCount === 0
                   ? 'bg-slate-50 border-slate-200 text-slate-350 cursor-not-allowed'
                   : 'bg-emerald-50 hover:bg-emerald-100/80 border-emerald-200 text-emerald-700 font-semibold cursor-pointer shadow-3xs hover:shadow-2xs active:scale-[0.98]'
               }`}
-              title="Archive all tasks in the final Approved/Construction column to keep the board clean"
+              title={`Archive completed tasks (${completedTasksCount})`}
             >
               <Archive className="w-3.5 h-3.5 text-emerald-500" />
-              Archive Completed ({completedTasksCount})
+              <span className="hidden sm:inline">Archive Completed ({completedTasksCount})</span>
+              <span className="inline sm:hidden text-[10px] font-bold">{completedTasksCount}</span>
             </button>
           )}
 
@@ -303,9 +642,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           {!isViewer && (
             <button
               onClick={() => setShowAddForm(true)}
-              className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium transition-colors cursor-pointer"
+              title="Add Task"
             >
-              <Plus className="w-3.5 h-3.5" /> Add Task
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Add Task</span>
             </button>
           )}
         </div>
@@ -437,6 +778,34 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     required
                   />
                 </div>
+                {(!visualSettings || visualSettings.agileEstimationMetric === 'story_points') && (
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Story Points</label>
+                    <select
+                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-100 focus:border-indigo-400 bg-white cursor-pointer"
+                      value={newStoryPoints}
+                      onChange={(e) => setNewStoryPoints(Number(e.target.value))}
+                    >
+                      {[1, 2, 3, 5, 8, 13].map(val => (
+                        <option key={val} value={val}>{val} SP</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {visualSettings?.agileEstimationMetric === 't_shirt' && (
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">T-Shirt Size Weight</label>
+                    <select
+                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-100 focus:border-indigo-400 bg-white cursor-pointer"
+                      value={newTShirtSize}
+                      onChange={(e) => setNewTShirtSize(e.target.value as any)}
+                    >
+                      {['S', 'M', 'L', 'XL'].map(sz => (
+                        <option key={sz} value={sz}>{sz}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Assignees (Select Multiple)</label>
                   {currentUser.role === 'engineer' ? (
@@ -554,36 +923,91 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       </AnimatePresence>
 
       {/* Kanban Board Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 overflow-x-auto pb-4">
+      <div className="flex flex-col md:flex-row md:flex-nowrap gap-3.5 pb-4 w-full md:overflow-x-auto select-none">
         {stages.map(stage => {
           const stageTasks = filteredTasks.filter(t => t.stageId === stage.id);
+          const isCollapsed = collapsedStages[stage.id] ?? false;
+          
+          const sortedStageTasks = [...stageTasks].sort((a, b) => {
+            if (sortBy === 'priority') {
+              const priorityWeights = { critical: 4, high: 3, medium: 2, low: 1 };
+              const aWeight = priorityWeights[a.priority] || 0;
+              const bWeight = priorityWeights[b.priority] || 0;
+              return bWeight - aWeight;
+            }
+            if (sortBy === 'date') {
+              if (!a.dueDate) return 1;
+              if (!b.dueDate) return -1;
+              return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+            }
+            if (sortBy === 'effort') {
+              const isHours = visualSettings?.agileEstimationMetric === 'hours';
+              const isTShirt = visualSettings?.agileEstimationMetric === 't_shirt';
+              if (isHours) {
+                return (b.estimatedHours || 0) - (a.estimatedHours || 0);
+              } else if (isTShirt) {
+                const tShirtWeights = { 'XL': 4, 'L': 3, 'M': 2, 'S': 1 };
+                return (tShirtWeights[b.tShirtSize || 'M'] || 2) - (tShirtWeights[a.tShirtSize || 'M'] || 2);
+              } else {
+                return (b.storyPoints || 0) - (a.storyPoints || 0);
+              }
+            }
+            return 0; // keeps the drag-and-drop sequence order as is
+          });
           
           return (
             <div 
               key={stage.id}
-              onDragOver={handleDragOver}
+              onDragOver={(e) => handleDragOver(e, stage.id)}
+              onDragLeave={handleDragLeaveStage}
               onDrop={(e) => handleDrop(e, stage.id)}
-              className="flex flex-col bg-slate-50 border border-slate-200 rounded-lg max-h-[70vh] min-h-[420px]"
+              className={`kanban-column-container flex flex-col w-full md:flex-1 md:min-w-0 md:shrink rounded-lg transition-all duration-200 border-2 ${
+                isCollapsed 
+                  ? 'max-h-[50px] min-h-[50px] md:max-h-[70vh] md:min-h-[420px]' 
+                  : 'max-h-[70vh] min-h-[120px] md:min-h-[420px]'
+              } ${
+                activeDragOverStageId === stage.id 
+                  ? 'bg-indigo-50/45 dark:bg-indigo-950/25 border-indigo-400 dark:border-indigo-800 shadow-sm scale-[1.01]' 
+                  : 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800'
+              }`}
             >
-              {/* Column Header */}
-              <div className="flex items-center justify-between p-3 border-b border-slate-150">
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: stage.color }} />
-                  <span className="text-xs font-semibold text-slate-700 truncate max-w-[130px]">{stage.name}</span>
+              {/* Column Header - Clickable on mobile to expand/collapse */}
+              <div 
+                onClick={() => {
+                  if (window.innerWidth < 768) {
+                    toggleStageCollapsed(stage.id);
+                  }
+                }}
+                className="flex items-center justify-between p-2.5 xs:p-3 border-b border-slate-150 cursor-pointer md:cursor-default select-none"
+              >
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                  <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[150px] sm:max-w-[180px] md:max-w-[130px]" title={stage.name}>
+                    {stage.name}
+                  </span>
                 </div>
-                <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-slate-200/60 text-slate-600">
-                  {stageTasks.length}
-                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[9px] sm:text-[10px] font-medium px-1.5 py-0.2 rounded bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                    {stageTasks.length}
+                  </span>
+                  <div className="md:hidden text-slate-400 hover:text-slate-600 transition-colors">
+                    {isCollapsed ? (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    )}
+                  </div>
+                </div>
               </div>
-
+ 
               {/* Column Task Area */}
-              <div className="flex-1 overflow-y-auto p-2.5 space-y-2">
-                {stageTasks.length === 0 ? (
+              <div className={`flex-1 overflow-y-auto p-1.5 sm:p-2.5 space-y-1.5 sm:space-y-2 ${isCollapsed ? 'hidden md:block' : 'block'}`}>
+                {sortedStageTasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full py-12 text-slate-400 text-center p-2">
                     <p className="text-[10px] font-normal">Empty</p>
                   </div>
                 ) : (
-                  stageTasks.map(task => {
+                  sortedStageTasks.map(task => {
                     const assignee = users.find(u => u.id === task.assignedTo);
                     const isTaskOverdue = task.stageId !== 'approved' && new Date(task.dueDate) < new Date();
                     
@@ -609,16 +1033,25 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           }}
                           draggable={!isViewer}
                           onDragStart={(e) => handleDragStart(e, task.id)}
+                          onDragEnd={handleDragEnd}
                           onDragOver={(e) => handleCardDragOver(e, task.id)}
                           onDragLeave={handleCardDragLeave}
                           onDrop={(e) => handleCardDrop(e, task)}
                           onClick={() => onSelectTask(task.id)}
-                          className={`p-3 bg-white border rounded hover:border-slate-350 cursor-pointer relative group transition-all duration-200 ${
+                          className={`${
+                            visualSettings?.cardCompactness === 'compact' ? 'p-2' :
+                            visualSettings?.cardCompactness === 'spacious' ? 'p-4.5' :
+                            'p-3'
+                          } bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded hover:border-slate-350 dark:hover:border-slate-700 cursor-pointer relative group transition-all duration-200 ${
                             isViewer ? '' : 'active:scale-[0.98]'
                           } ${
                             showOverdue && isTaskOverdue 
-                              ? 'border-rose-300 bg-gradient-to-br from-rose-50/15 via-white to-white shadow-xs hover:shadow-rose-100/20' 
-                              : 'border-slate-200/80'
+                              ? 'border-rose-300 dark:border-rose-900/50 bg-gradient-to-br from-rose-50/15 via-white dark:via-slate-900 to-white dark:to-slate-900 shadow-xs hover:shadow-rose-100/20' 
+                              : ''
+                          } ${
+                            draggedTaskId === task.id 
+                              ? 'opacity-25 border-dashed border-indigo-400 dark:border-indigo-800 scale-[0.97] pointer-events-none' 
+                              : ''
                           }`}
                         >
                           {/* Left-edge ribbon indicator for overdue cards */}
@@ -627,17 +1060,24 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           )}
                           {/* Task metadata row */}
                           <div className="flex justify-between items-center gap-2 mb-1.5">
-                            {showDisciplineBadge ? (
-                              <span className={`text-[9px] capitalize px-1.5 py-0.2 rounded font-medium border ${
-                                task.type === 'architecture' ? 'bg-red-50 text-red-600 border-red-100' :
-                                task.type === 'structure' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                task.type === 'electric' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                                task.type === 'mechanical' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                'bg-slate-50 text-slate-500 border-slate-100'
-                              }`}>
-                                {task.type}
-                              </span>
-                            ) : <div />}
+                            <div className="flex items-center gap-1">
+                              {!isViewer && (
+                                <div className="text-slate-400 dark:text-slate-600 cursor-grab active:cursor-grabbing p-0.5 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title="Drag to reorder">
+                                  <GripVertical className="w-3.5 h-3.5" />
+                                </div>
+                              )}
+                              {showDisciplineBadge ? (
+                                <span className={`text-[9px] capitalize px-1.5 py-0.2 rounded font-medium border ${
+                                  task.type === 'architecture' ? 'bg-red-50 text-red-600 border-red-100' :
+                                  task.type === 'structure' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                  task.type === 'electric' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                  task.type === 'mechanical' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                  'bg-slate-50 text-slate-500 border-slate-100'
+                                }`}>
+                                  {task.type}
+                                </span>
+                              ) : <div />}
+                            </div>
 
                             {showPriority && (
                               <span className={`text-[9px] font-medium capitalize ${
@@ -652,7 +1092,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           </div>
 
                           {/* Title */}
-                          <h4 className="text-xs font-semibold text-slate-800 leading-snug mb-2">{task.title}</h4>
+                          <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-100 leading-snug mb-2">{task.title}</h4>
 
                           {/* Task Labels Scanning Badges */}
                           {task.labelIds && task.labelIds.length > 0 && (
@@ -686,6 +1126,29 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                             <div className={`flex items-center gap-1 ${isTaskOverdue ? 'text-rose-500 font-medium' : ''}`}>
                               <AlertTriangle className={`w-3 h-3 ${isTaskOverdue ? 'text-rose-450 animate-pulse' : 'text-slate-300'}`} />
                               <span>Due: {task.dueDate}</span>
+                              {(() => {
+                                const metric = visualSettings?.agileEstimationMetric || 'story_points';
+                                if (metric === 'hours' && task.estimatedHours) {
+                                  return (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-150 border border-slate-200 text-slate-650 font-mono ml-auto select-none" title="Estimated Man Hours">
+                                      ⏱️ {task.estimatedHours}h
+                                    </span>
+                                  );
+                                } else if (metric === 't_shirt' && task.tShirtSize) {
+                                  return (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 border border-amber-200 text-amber-700 font-mono ml-auto select-none" title="T-Shirt Size Estimation">
+                                      👕 {task.tShirtSize}
+                                    </span>
+                                  );
+                                } else if (task.storyPoints) {
+                                  return (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 border border-indigo-200 text-indigo-700 font-mono ml-auto select-none" title="Story Points Estimation">
+                                      ⚡ {task.storyPoints} SP
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </div>
                           </div>
 
@@ -877,6 +1340,317 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           );
         })}
       </div>
+        </>
+      ) : (
+        <div className="space-y-6">
+          {/* Main Hero Header */}
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-955 to-slate-900 text-white p-6 rounded-2xl border border-indigo-950 shadow-md">
+            <h2 className="text-base font-bold flex items-center gap-2">
+              <Compass className="w-5 h-5 text-indigo-400 animate-spin-slow" />
+              <span>Project Delivery Methodology</span>
+            </h2>
+            <p className="text-xs text-slate-300 mt-1.5 leading-relaxed max-w-2xl">
+              Standardize your engineering processes by selecting standard pipeline structures. Team members can switch between Waterfall sequential stages and Agile Scrum sprints to streamline active design collaboration.
+            </p>
+          </div>
+
+          {/* Preset Cards Bento Grid */}
+          <div>
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
+              Standard Presets & Flow Pipelines
+            </h3>
+            <div className="grid md:grid-cols-3 gap-4">
+              
+              {/* Card 1: Waterfall */}
+              <div className={`p-5 bg-white border rounded-2xl flex flex-col justify-between hover:shadow-md transition-all ${
+                visualSettings?.activeMethodology === 'waterfall'
+                  ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-sm'
+                  : 'border-slate-200'
+              }`}>
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
+                      🏗️ Waterfall System
+                    </span>
+                    {visualSettings?.activeMethodology === 'waterfall' && (
+                      <span className="text-[9px] uppercase tracking-wider font-extrabold bg-indigo-600 text-white px-2.5 py-0.5 rounded-full">
+                        ACTIVE STANDARD
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 leading-relaxed mb-4">
+                    Best for sequential engineering deliverables requiring formal peer reviews and design verifications.
+                  </p>
+                  
+                  {/* Stages Timeline */}
+                  <div className="space-y-2 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">Pipeline Sequence:</span>
+                    <div className="flex flex-col gap-1.5">
+                      {[
+                        { id: 'planning', name: 'Planning & Feasibility' },
+                        { id: 'design', name: 'Core Drafting & Design' },
+                        { id: 'peer_review', name: 'Peer & Q/C Review' },
+                        { id: 'client_approval', name: 'Client Approval' },
+                        { id: 'approved', name: 'Issued for Construction' }
+                      ].map((item, idx) => (
+                        <div key={item.id} className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-700">
+                          <span className="w-4 h-4 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center text-[8px] font-mono">{idx + 1}</span>
+                          <span>{item.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleApplyPresetInBoard('waterfall')}
+                  className={`w-full py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    visualSettings?.activeMethodology === 'waterfall'
+                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-default'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98]'
+                  }`}
+                  disabled={visualSettings?.activeMethodology === 'waterfall'}
+                >
+                  {visualSettings?.activeMethodology === 'waterfall' ? '✓ Currently Applied' : 'Apply Waterfall Standard'}
+                </button>
+              </div>
+
+              {/* Card 2: Agile */}
+              <div className={`p-5 bg-white border rounded-2xl flex flex-col justify-between hover:shadow-md transition-all ${
+                visualSettings?.activeMethodology === 'agile'
+                  ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-sm'
+                  : 'border-slate-200'
+              }`}>
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
+                      ⚡ Agile Scrum
+                    </span>
+                    {visualSettings?.activeMethodology === 'agile' && (
+                      <span className="text-[9px] uppercase tracking-wider font-extrabold bg-indigo-600 text-white px-2.5 py-0.5 rounded-full">
+                        ACTIVE STANDARD
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 leading-relaxed mb-4">
+                    Best for quick iteration cycles, dynamic backlogs, continuous integration, and rapid sprint cycles.
+                  </p>
+                  
+                  {/* Stages Timeline */}
+                  <div className="space-y-2 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">Pipeline Sequence:</span>
+                    <div className="flex flex-col gap-1.5">
+                      {[
+                        { id: 'backlog', name: 'Backlog / To Do' },
+                        { id: 'in_progress', name: 'Active Sprint' },
+                        { id: 'code_review', name: 'QC & Code Review' },
+                        { id: 'testing', name: 'Testing & Validation' },
+                        { id: 'approved', name: 'Done / Delivered' }
+                      ].map((item, idx) => (
+                        <div key={item.id} className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-700">
+                          <span className="w-4 h-4 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center text-[8px] font-mono">{idx + 1}</span>
+                          <span>{item.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleApplyPresetInBoard('agile')}
+                  className={`w-full py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    visualSettings?.activeMethodology === 'agile'
+                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-default'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98]'
+                  }`}
+                  disabled={visualSettings?.activeMethodology === 'agile'}
+                >
+                  {visualSettings?.activeMethodology === 'agile' ? '✓ Currently Applied' : 'Apply Agile Scrum Standard'}
+                </button>
+              </div>
+
+              {/* Card 3: Simple */}
+              <div className={`p-5 bg-white border rounded-2xl flex flex-col justify-between hover:shadow-md transition-all ${
+                visualSettings?.activeMethodology === 'simple'
+                  ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-sm'
+                  : 'border-slate-200'
+              }`}>
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
+                      📝 Simple Kanban
+                    </span>
+                    {visualSettings?.activeMethodology === 'simple' && (
+                      <span className="text-[9px] uppercase tracking-wider font-extrabold bg-indigo-600 text-white px-2.5 py-0.5 rounded-full">
+                        ACTIVE STANDARD
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 leading-relaxed mb-4">
+                    Best for lightweight, general workflows with no complex testing/review iterations.
+                  </p>
+                  
+                  {/* Stages Timeline */}
+                  <div className="space-y-2 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">Pipeline Sequence:</span>
+                    <div className="flex flex-col gap-1.5">
+                      {[
+                        { id: 'todo', name: 'Simple Tasks To Do' },
+                        { id: 'in_progress', name: 'Under Execution' },
+                        { id: 'blocked', name: 'Blocked / Delayed' },
+                        { id: 'approved', name: 'Completed / Done' }
+                      ].map((item, idx) => (
+                        <div key={item.id} className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-700">
+                          <span className="w-4 h-4 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center text-[8px] font-mono">{idx + 1}</span>
+                          <span>{item.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleApplyPresetInBoard('simple')}
+                  className={`w-full py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    visualSettings?.activeMethodology === 'simple'
+                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-default'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98]'
+                  }`}
+                  disabled={visualSettings?.activeMethodology === 'simple'}
+                >
+                  {visualSettings?.activeMethodology === 'simple' ? '✓ Currently Applied' : 'Apply Simple Standard'}
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Agile Scrum Iteration Parameters & Live Health Diagnostic */}
+          <div className="grid md:grid-cols-2 gap-6 pt-2">
+            
+            {/* Left Column: Editable Cadence Details */}
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-3xs text-left space-y-4">
+              <div>
+                <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  ⚙️ Active Iteration Parameters
+                </h4>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Configure active cadence thresholds. Changes immediately update all dashboard visual metrics.
+                </p>
+              </div>
+
+              <div className="space-y-3.5">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Sprint Iteration Length</label>
+                  <select
+                    value={visualSettings?.agileSprintDurationWeeks || 2}
+                    onChange={(e) => onUpdateVisualSettings?.({ ...visualSettings!, agileSprintDurationWeeks: Number(e.target.value) })}
+                    className="w-full px-3 py-2 text-xs rounded border border-slate-200 bg-white text-slate-800 cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  >
+                    <option value={1}>1 Week (Fast Agile)</option>
+                    <option value={2}>2 Weeks (Standard Sprint)</option>
+                    <option value={3}>3 Weeks (Extended Cycle)</option>
+                    <option value={4}>4 Weeks (Monthly Sprint)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Active Sprint Goal</label>
+                  <input
+                    type="text"
+                    value={visualSettings?.agileSprintGoal || ''}
+                    onChange={(e) => onUpdateVisualSettings?.({ ...visualSettings!, agileSprintGoal: e.target.value })}
+                    placeholder="Focus of the current iteration..."
+                    className="w-full px-3 py-2 text-xs rounded border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Backlog Capacity Limit</label>
+                    <input
+                      type="number"
+                      value={visualSettings?.agileTargetCapacity || 30}
+                      onChange={(e) => onUpdateVisualSettings?.({ ...visualSettings!, agileTargetCapacity: Number(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 text-xs rounded border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Estimation Unit</label>
+                    <select
+                      value={visualSettings?.agileEstimationMetric || 'story_points'}
+                      onChange={(e) => onUpdateVisualSettings?.({ ...visualSettings!, agileEstimationMetric: e.target.value as any })}
+                      className="w-full px-3 py-2 text-xs rounded border border-slate-200 bg-white text-slate-800 cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    >
+                      <option value="story_points">🔴 Story Points</option>
+                      <option value="hours">⏰ Estimated Hours</option>
+                      <option value="t_shirt">👕 T-Shirt Sizes</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Live Diagnostic */}
+            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-3xs text-left space-y-4">
+              <div>
+                <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  📊 Active Sprint Health Check
+                </h4>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Computed live workload balance across all tasks scheduled in the current active lane.
+                </p>
+              </div>
+
+              {/* Stats Card Widget */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
+                <div className="flex justify-between items-center text-xs font-semibold text-slate-700">
+                  <span>Sprint Allocation Load:</span>
+                  <span className={`${loadPercentage > 100 ? 'text-rose-600 font-extrabold' : 'text-indigo-600 font-bold'}`}>
+                    {currentLoad} / {targetCapacity} {metricName} ({loadPercentage}%)
+                  </span>
+                </div>
+
+                {/* Loading bar */}
+                <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-500 rounded-full ${
+                      loadPercentage > 100 ? 'bg-rose-500 animate-pulse' : 'bg-indigo-600'
+                    }`}
+                    style={{ width: `${Math.min(100, loadPercentage)}%` }}
+                  />
+                </div>
+
+                {/* System advice alert */}
+                {loadPercentage > 100 ? (
+                  <div className="bg-rose-50 border border-rose-100 p-2.5 rounded-lg flex items-start gap-2 text-[10px] text-rose-700 leading-normal">
+                    <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="font-bold">System Overload Warning:</strong> Current lane commits exceed soft target guidelines by {currentLoad - targetCapacity} {metricName}. Recommend re-distributing tasks or pruning backlogs.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-indigo-50/50 border border-indigo-100 p-2.5 rounded-lg flex items-start gap-2 text-[10px] text-indigo-800 leading-normal">
+                    <Check className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="font-bold">Workload Balanced:</strong> Safe bandwidth. The current team load is within comfortable operational tolerances.
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-[10px] text-slate-400 leading-relaxed font-medium space-y-1">
+                  <p>👉 <strong className="text-slate-600">Sprint Cadence:</strong> Evaluated every {visualSettings?.agileSprintDurationWeeks || 2} weeks.</p>
+                  <p>👉 <strong className="text-slate-600">Active Commitments:</strong> {activeSprintTasks.length} tasks scheduled.</p>
+                  {visualSettings?.agileSprintGoal && (
+                    <p>🎯 <strong className="text-slate-600">Sprint Goal:</strong> "{visualSettings.agileSprintGoal}"</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

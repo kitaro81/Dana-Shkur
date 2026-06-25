@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Project, User, WorkflowStage, UserRole, TaskType, VisualSettings, ReportTemplateSettings, TaskTemplate, Label } from '../types';
-import { Shield, Plus, Briefcase, PlusCircle, Trash, RefreshCw, Layers, Edit2, Users, Check, X, Sliders, Settings, FileText, Clock, Tag, Megaphone } from 'lucide-react';
+import { Project, User, WorkflowStage, UserRole, TaskType, VisualSettings, ReportTemplateSettings, TaskTemplate, Label, Task } from '../types';
+import { Shield, Plus, Briefcase, PlusCircle, Trash, RefreshCw, Layers, Edit2, Users, Check, X, Sliders, Settings, FileText, Clock, Tag, Megaphone, Palette, AlertTriangle, Zap, Kanban } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface AdminDashboardProps {
@@ -23,6 +23,7 @@ interface AdminDashboardProps {
   onInviteUser: (user: Omit<User, 'id' | 'joinedAt'>) => void;
   onUpdateStages: (stages: WorkflowStage[]) => void;
   onDeleteProject?: (projectId: string) => void;
+  tasks?: Task[];
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -45,6 +46,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onInviteUser,
   onUpdateStages,
   onDeleteProject,
+  tasks = [],
 }) => {
   // Tabs: Flow/Stages, Team/Roles, Projects Setup, Preferences, Task Templates
   const [activeSubTab, setActiveSubTab] = useState<'stages' | 'users' | 'projects' | 'preferences' | 'templates'>('stages');
@@ -67,6 +69,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editedStages, setEditedStages] = useState<WorkflowStage[]>([...stages]);
   const [newStageName, setNewStageName] = useState('');
   const [newStageColor, setNewStageColor] = useState('#F59E0B');
+  const [presetToApply, setPresetToApply] = useState<'waterfall' | 'agile' | 'simple' | null>(null);
 
   // --- Task template form state ---
   const [newTplName, setNewTplName] = useState('');
@@ -181,8 +184,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
   
   const handleApplyPreset = (presetType: 'waterfall' | 'agile' | 'simple') => {
+    setPresetToApply(presetType);
+  };
+
+  const confirmApplyPreset = () => {
+    if (!presetToApply) return;
     let presetStages: WorkflowStage[] = [];
-    if (presetType === 'waterfall') {
+    if (presetToApply === 'waterfall') {
       presetStages = [
         { id: 'planning', name: 'Planning & Feasibility', color: '#64748b', order: 0 },
         { id: 'design', name: 'Core Drafting & Design', color: '#3b82f6', order: 1 },
@@ -190,7 +198,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         { id: 'client_approval', name: 'Client Approval', color: '#8b5cf6', order: 3 },
         { id: 'approved', name: 'Issued for Construction', color: '#10b981', order: 4 },
       ];
-    } else if (presetType === 'agile') {
+    } else if (presetToApply === 'agile') {
       presetStages = [
         { id: 'backlog', name: 'Backlog / To Do', color: '#475569', order: 0 },
         { id: 'in_progress', name: 'Active Sprint', color: '#2563eb', order: 1 },
@@ -206,14 +214,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         { id: 'approved', name: 'Completed / Done', color: '#10b981', order: 3 },
       ];
     }
-    if (confirm(`Applying this preset will overwrite your current Kanban stages layout with the new ${presetType.toUpperCase()} workflow structure. Do you wish to proceed?`)) {
-      setEditedStages(presetStages);
-      onUpdateStages(presetStages);
-      onUpdateVisualSettings({
-        ...visualSettings,
-        activeMethodology: presetType
-      });
-    }
+    setEditedStages(presetStages);
+    onUpdateStages(presetStages);
+    onUpdateVisualSettings({
+      ...visualSettings,
+      activeMethodology: presetToApply
+    });
+    setPresetToApply(null);
   };
 
   if (!isAdmin) {
@@ -1183,6 +1190,91 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </div>
 
+            {/* Row 2, Section 1: Workspace Branding & Styling Customization */}
+            <div className="bg-white border border-slate-200 p-5 rounded-xl space-y-4 md:col-span-2 text-left">
+              <div className="border-b border-slate-100 pb-2">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Palette className="w-4 h-4 text-indigo-500" />
+                  Workspace Branding & Custom Theme Settings
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Rebrand the workspace, choose custom style density, toggle themes, and select primary design colors.
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6 pt-1">
+                {/* Custom Workspace Name */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Workspace Organization Name</label>
+                  <input
+                    type="text"
+                    value={visualSettings.workspaceName || ''}
+                    onChange={(e) => onUpdateVisualSettings({ ...visualSettings, workspaceName: e.target.value })}
+                    placeholder="e.g. Nexus Design Ops"
+                    className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white"
+                  />
+                  <p className="text-[9px] text-slate-400">Updates the workspace name across the header, portals, and reports.</p>
+                </div>
+
+                {/* Primary Brand Accent Color */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Primary Accent Color</label>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {[
+                      { id: 'indigo', hex: '#4f46e5', name: 'Indigo' },
+                      { id: 'emerald', hex: '#10b981', name: 'Emerald' },
+                      { id: 'amber', hex: '#f59e0b', name: 'Amber' },
+                      { id: 'rose', hex: '#f43f5e', name: 'Rose' },
+                      { id: 'violet', hex: '#8b5cf6', name: 'Violet' },
+                      { id: 'cyan', hex: '#06b6d4', name: 'Cyan' },
+                    ].map(col => (
+                      <button
+                        key={col.id}
+                        type="button"
+                        onClick={() => onUpdateVisualSettings({ ...visualSettings, primaryColor: col.id as any })}
+                        className={`w-7 h-7 rounded-full border-2 cursor-pointer flex items-center justify-center transition-all ${
+                          (visualSettings.primaryColor || 'indigo') === col.id ? 'border-slate-800 scale-110 shadow-sm' : 'border-slate-200 hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: col.hex }}
+                        title={col.name}
+                      >
+                        {(visualSettings.primaryColor || 'indigo') === col.id && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[9px] text-slate-400">Select the primary theme color for dynamic visual branding elements.</p>
+                </div>
+
+                {/* Kanban Card Compactness */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Kanban Card Grid Density</label>
+                  <div className="flex bg-slate-100/80 p-0.5 rounded-lg border border-slate-200 mt-1">
+                    {[
+                      { id: 'compact', label: 'Compact' },
+                      { id: 'comfortable', label: 'Comfortable' },
+                      { id: 'spacious', label: 'Spacious' },
+                    ].map(sz => (
+                      <button
+                        key={sz.id}
+                        type="button"
+                        onClick={() => onUpdateVisualSettings({ ...visualSettings, cardCompactness: sz.id as any })}
+                        className={`flex-1 py-1 px-2 text-[10px] font-bold rounded-md transition-all cursor-pointer ${
+                          (visualSettings.cardCompactness || 'comfortable') === sz.id
+                            ? 'bg-white text-slate-800 shadow-3xs border border-slate-200/50'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        {sz.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[9px] text-slate-400">Adjust padding, sizes, and spacing of tasks inside columns.</p>
+                </div>
+              </div>
+            </div>
+
             {/* Row 2, Section 2: Welcome Modal & Broadcast Announcement Settings */}
             <div className="bg-white border border-slate-200 p-5 rounded-xl space-y-4 md:col-span-2 text-left">
               <div className="border-b border-slate-100 pb-2">
@@ -1274,6 +1366,174 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                   </div>
                   <p className="text-[9px] text-slate-400 leading-normal mt-3">Changes to the modal contents are immediately propagated. Deselect the "Active" toggle to disable it.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 3: Agile & Scrum Management Control Center */}
+            <div className="bg-white border border-slate-200 p-5 rounded-xl space-y-4 md:col-span-2 text-left">
+              <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Zap className="w-4 h-4 text-amber-500" />
+                    Agile Scrum Management Control Center
+                  </h3>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Fine-tune your Agile delivery settings, sprint capacity, estimation metrics, and active project sprint health checks.
+                  </p>
+                </div>
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-850 flex items-center gap-1 font-mono uppercase">
+                  ⚡ Scrum Config
+                </span>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6">
+                {/* Column 1: Sprint & Goal Configurations */}
+                <div className="space-y-4">
+                  <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">1. Sprint Cadence & Goals</h4>
+                  
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Sprint Iteration Length</label>
+                    <select
+                      value={visualSettings.agileSprintDurationWeeks || 2}
+                      onChange={(e) => onUpdateVisualSettings({ ...visualSettings, agileSprintDurationWeeks: Number(e.target.value) })}
+                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white cursor-pointer"
+                    >
+                      <option value={1}>1 Week (Fast Iterations)</option>
+                      <option value={2}>2 Weeks (Standard Scrum)</option>
+                      <option value={3}>3 Weeks (Medium Cycle)</option>
+                      <option value={4}>4 Weeks (Monthly Sprint)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Active Sprint Goal</label>
+                    <textarea
+                      value={visualSettings.agileSprintGoal || ''}
+                      onChange={(e) => onUpdateVisualSettings({ ...visualSettings, agileSprintGoal: e.target.value })}
+                      rows={3}
+                      placeholder="e.g., Deliver core blueprints, complete Q/C checkups, and obtain structural engineer stamp."
+                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Column 2: Estimation & Strict Validation */}
+                <div className="space-y-4">
+                  <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">2. Metrics & Guardrails</h4>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Core Estimation Metric</label>
+                    <select
+                      value={visualSettings.agileEstimationMetric || 'story_points'}
+                      onChange={(e) => onUpdateVisualSettings({ ...visualSettings, agileEstimationMetric: e.target.value as any })}
+                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white cursor-pointer"
+                    >
+                      <option value="story_points">Story Points (Fibonacci: 1, 2, 3, 5, 8, 13)</option>
+                      <option value="hours">Man-Hours (Traditional hours)</option>
+                      <option value="t_shirt">T-Shirt Sizing (S, M, L, XL)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Sprint Backlog Capacity Limit</label>
+                    <input
+                      type="number"
+                      value={visualSettings.agileTargetCapacity || 40}
+                      onChange={(e) => onUpdateVisualSettings({ ...visualSettings, agileTargetCapacity: Number(e.target.value) || 0 })}
+                      placeholder="e.g. 40"
+                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-2 pt-1">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={!!visualSettings.agileRequireStoryPoints}
+                        onChange={(e) => onUpdateVisualSettings({ ...visualSettings, agileRequireStoryPoints: e.target.checked })}
+                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      Enforce Mandatory Estimation
+                    </label>
+                    <p className="text-[9px] text-slate-400 pl-5">Block moving tasks out of backlog stages until they have an estimation value assigned.</p>
+                  </div>
+                </div>
+
+                {/* Column 3: Live Sprint Health Diagnostic */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between text-left">
+                  <div>
+                    <span className="text-[9px] font-bold text-amber-700 bg-amber-100/85 px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">
+                      System Diagnosis
+                    </span>
+                    
+                    {/* Calculate Active Sprint metrics across tasks */}
+                    {(() => {
+                      // Find tasks belonging to "Active Sprint" (or column with ID containing 'sprint' or the 2nd stage)
+                      const sprintStageId = stages.find(s => s.id.toLowerCase().includes('sprint') || s.id.toLowerCase().includes('progress'))?.id || stages[1]?.id || 'sprint';
+                      const activeSprintTasks = tasks.filter(t => t.stageId === sprintStageId && !t.archived);
+                      
+                      let currentLoad = 0;
+                      let metricName = 'Story Points';
+                      
+                      if (visualSettings.agileEstimationMetric === 'hours') {
+                        currentLoad = activeSprintTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+                        metricName = 'Man-Hours';
+                      } else if (visualSettings.agileEstimationMetric === 't_shirt') {
+                        const tShirtMapping = { 'S': 1, 'M': 3, 'L': 5, 'XL': 8 };
+                        currentLoad = activeSprintTasks.reduce((sum, t) => sum + (tShirtMapping[t.tShirtSize || 'M'] || 3), 0);
+                        metricName = 'T-Shirt Weight (pts)';
+                      } else {
+                        currentLoad = activeSprintTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
+                        metricName = 'Story Points';
+                      }
+                      
+                      const targetCapacity = visualSettings.agileTargetCapacity || 40;
+                      const percentage = targetCapacity > 0 ? Math.min(100, Math.round((currentLoad / targetCapacity) * 100)) : 0;
+                      const isOverloaded = currentLoad > targetCapacity;
+                      
+                      return (
+                        <div className="mt-3.5 space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] text-slate-500 font-medium">Sprint Lane Status</span>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${isOverloaded ? 'bg-rose-100 text-rose-800 animate-pulse' : 'bg-emerald-100 text-emerald-800'}`}>
+                              {isOverloaded ? '⚠️ OVERLOADED' : '🟢 HEALTHY LOAD'}
+                            </span>
+                          </div>
+
+                          <div className="bg-white border border-slate-150 p-2.5 rounded-lg space-y-2">
+                            <div className="flex justify-between text-[11px]">
+                              <span className="font-semibold text-slate-700">Sprint Load ({metricName}):</span>
+                              <span className="font-bold text-slate-900 font-mono">{currentLoad} / {targetCapacity}</span>
+                            </div>
+                            
+                            {/* Bar */}
+                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                              <div 
+                                className={`h-full transition-all duration-300 ${isOverloaded ? 'bg-rose-500' : 'bg-indigo-600'}`}
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                            
+                            <div className="flex justify-between text-[8px] text-slate-400 font-mono">
+                              <span>0%</span>
+                              <span>Target Capacity ({targetCapacity})</span>
+                              <span>100%</span>
+                            </div>
+                          </div>
+
+                          <div className="text-[10px] text-slate-500 leading-normal space-y-1">
+                            <p>👉 <strong className="text-slate-700 font-bold">Sprint Cadence:</strong> Every <strong className="text-slate-700">{visualSettings.agileSprintDurationWeeks || 2} weeks</strong>.</p>
+                            <p>👉 <strong className="text-slate-700 font-bold">Task Count:</strong> <strong className="text-indigo-600 font-semibold">{activeSprintTasks.length} tasks</strong> actively committed.</p>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  
+                  <p className="text-[9px] text-slate-400 leading-relaxed mt-2">
+                    Tip: Target Capacity is used as a soft guardrail. Moving cards into the active sprint beyond this capacity will trigger a system overload warning.
+                  </p>
                 </div>
               </div>
             </div>
@@ -1516,6 +1776,65 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Preset Application Overwrite Confirmation Modal (In-App) */}
+      <AnimatePresence>
+        {presetToApply && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPresetToApply(null)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs"
+            />
+
+            {/* Modal Content */}
+            <motion.div
+              initial={{ scale: 0.95, y: 15, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 15, opacity: 0 }}
+              transition={{ type: 'spring', duration: 0.3 }}
+              className="relative w-full max-w-md bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden p-6 text-left"
+            >
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-full shrink-0">
+                  <Layers className="w-6 h-6 animate-none" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-sm font-bold text-slate-800 tracking-tight">
+                    Confirm Methodology Change
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Applying the <span className="font-semibold text-indigo-600 uppercase font-mono bg-indigo-50/50 px-1 py-0.5 rounded">{presetToApply}</span> preset will <span className="font-semibold text-rose-600">permanently overwrite</span> your current pipeline configuration.
+                  </p>
+                  <p className="text-[11px] text-slate-400 bg-slate-50 p-2.5 rounded-lg border border-slate-100 italic">
+                    "This replaces existing Kanban columns with standard stages designed for the selected delivery methodology."
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 mt-6 border-t border-slate-100 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setPresetToApply(null)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200/80 rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmApplyPreset}
+                  className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-all cursor-pointer hover:shadow-sm"
+                >
+                  Yes, Overwrite & Apply
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
