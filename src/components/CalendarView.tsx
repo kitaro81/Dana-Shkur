@@ -786,7 +786,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       </div>
 
                       {/* Lane Gantt Schedule Tracks Area */}
-                      <div className="flex-1 relative bg-white dark:bg-slate-900" style={{ height: `${trackHeight}px` }}>
+                      <div className="flex-1 relative bg-white" style={{ height: `${trackHeight}px` }}>
                         
                         {/* Interactive grid background lines & Snap to Grid click targets */}
                         <div className="absolute inset-0 grid z-0" style={{ gridTemplateColumns: `repeat(${timeScaleDays}, minmax(0, 1fr))` }}>
@@ -809,18 +809,18 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                                     }
                                   }
                                 }}
-                                className={`border-l border-slate-100 dark:border-slate-800 h-full transition-colors relative group ${
-                                  isToday ? 'bg-indigo-50/10 dark:bg-indigo-950/10 border-l-indigo-200/50 dark:border-l-indigo-800/50' : ''
+                                className={`border-l border-slate-100 h-full transition-colors relative group ${
+                                  isToday ? 'bg-indigo-50/10 border-l-indigo-200/50' : ''
                                 } ${
                                   selectedTaskId 
-                                    ? 'cursor-pointer hover:bg-indigo-100/30 dark:hover:bg-indigo-900/20' 
+                                    ? 'cursor-pointer hover:bg-indigo-100/30' 
                                     : ''
                                 }`}
                                 title={selectedTaskId ? `Click to snap selected task due date to ${dateStr} (Snap to Grid)` : undefined}
                               >
                                 {selectedTaskId && (
                                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                    <span className="text-[8px] font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 px-1.5 py-0.5 rounded shadow-3xs">
+                                    <span className="text-[8px] font-mono font-bold text-indigo-600 bg-white border border-indigo-200 px-1.5 py-0.5 rounded shadow-3xs">
                                       Snap Date
                                     </span>
                                   </div>
@@ -1205,40 +1205,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           </div>
         </div>
 
-        {/* Lower Timeline Statistics */}
-        <div className="bg-slate-50 p-4 border border-slate-150 rounded-xl space-y-3 mt-4">
-          <span className="text-[9px] uppercase font-bold tracking-widest text-slate-400 block font-mono">timeline health indices</span>
-          
-          <div className="grid grid-cols-2 gap-2 text-center text-slate-800 font-mono">
-            <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-              <span className="block text-[8px] uppercase text-slate-400 font-bold mb-0.5">Tasks Spanned</span>
-              <span className="text-sm font-extrabold text-slate-800">{scheduledTasksCount}</span>
-            </div>
-            <div className="bg-white p-2.5 rounded-lg border border-slate-200">
-              <span className="block text-[8px] uppercase text-slate-400 font-bold mb-0.5">Total Load</span>
-              <span className="text-xs font-extrabold text-slate-800 leading-normal">{totalLoadHours} hrs</span>
-            </div>
-          </div>
 
-          <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 text-xs font-mono">
-            <span className="text-slate-400 text-[9px] uppercase font-bold">Timeline Overdue</span>
-            <span className={`font-extrabold px-1.5 py-0.2 rounded-full text-[10px] ${
-              totalOverdueCount > 0 ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-slate-100 text-slate-600'
-            }`}>
-              {totalOverdueCount} delay{totalOverdueCount !== 1 ? 's' : ''}
-            </span>
-          </div>
-
-          <div className="p-2.5 bg-indigo-50 border border-indigo-100 rounded-lg text-[10px] text-indigo-850 space-y-1">
-            <div className="flex items-center gap-1 font-bold">
-              <CheckCircle2 className="w-3.5 h-3.5 text-indigo-500 inline shrink-0" />
-              <span>Gantt Sequence Lock</span>
-            </div>
-            <p className="text-[9px] text-indigo-700/90 leading-relaxed font-sans">
-              Schedule tracks visually chart individual durations between task registration date and projected completion milestones.
-            </p>
-          </div>
-        </div>
 
       </div>
 

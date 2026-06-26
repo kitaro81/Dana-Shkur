@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Project, Task, User, WorkflowStage, TaskType } from '../types';
-import { FileText, Download, Printer, Percent, BarChart2, CheckCircle2, History, AlertTriangle } from 'lucide-react';
-import { filterTasksByTimeframe, exportTasksToCSV, printReportHTML } from '../utils/reports';
+import { FileText, Percent, BarChart2, CheckCircle2, History, AlertTriangle } from 'lucide-react';
+import { filterTasksByTimeframe } from '../utils/reports';
 import { motion } from 'motion/react';
 
 interface ReportsPanelProps {
@@ -35,9 +35,6 @@ export const ReportsPanel: React.FC<ReportsPanelProps> = ({
 
   // Compute stats metrics
   const totalTasksCount = finalFilteredTasks.length;
-  
-  const estimatedHoursSum = finalFilteredTasks.reduce((sum, t) => sum + t.estimatedHours, 0);
-  const loggedHoursSum = finalFilteredTasks.reduce((sum, t) => sum + t.loggedHours, 0);
   
   const completedTasksCount = finalFilteredTasks.filter(t => t.stageId === 'approved').length;
   const overdueTasksCount = finalFilteredTasks.filter(t => {
@@ -80,23 +77,6 @@ export const ReportsPanel: React.FC<ReportsPanelProps> = ({
       count
     };
   });
-
-  // Calculate percentage efficiency
-  const performanceRate = estimatedHoursSum > 0 
-    ? Math.round((loggedHoursSum / estimatedHoursSum) * 100) 
-    : 0;
-
-  const handleExportCSV = () => {
-    const title = `ledger_report_${selectedProjectId}_${selectedTimeframe}`;
-    exportTasksToCSV(finalFilteredTasks, projects, users, stages, title);
-  };
-
-  const handlePrint = () => {
-    const durationLabel = selectedTimeframe === 'all' ? 'All Time' :
-                          selectedTimeframe === 'daily' ? 'Last 24 Hours' :
-                          selectedTimeframe === 'weekly' ? 'Last 7 Days' : 'Last 30 Days';
-    printReportHTML(finalFilteredTasks, currentProjectSelection, users, stages, durationLabel, reportTemplateSettings);
-  };
 
   return (
     <div className="space-y-6">
@@ -153,26 +133,14 @@ export const ReportsPanel: React.FC<ReportsPanelProps> = ({
 
         {/* Action Triggers */}
         <div className="flex items-center gap-2">
-          
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 hover:border-slate-350 bg-white hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700 cursor-pointer transition-colors"
-          >
-            <Download className="w-4 h-4 text-slate-500" /> EXPORT CSV
-          </button>
-          
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer transition-colors"
-          >
-            <Printer className="w-4 h-4" /> GENERATE REPORT PDF
-          </button>
-
+          <div className="px-3 py-2 text-[10px] font-bold text-slate-400 italic">
+            Export tools moved to Center tab
+          </div>
         </div>
       </div>
 
       {/* Main KPI Stats grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         
         {/* KPI 1: Active Tasks */}
         <div className="bg-white p-5 border border-slate-200 rounded-xl relative overflow-hidden">
@@ -190,45 +158,6 @@ export const ReportsPanel: React.FC<ReportsPanelProps> = ({
             <span>Completed Design:</span>
             <span className="font-bold text-emerald-600">{completedTasksCount} finished</span>
           </div>
-        </div>
-
-        {/* KPI 2: Logged Hours */}
-        <div className="bg-white p-5 border border-slate-200 rounded-xl">
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="block text-[10px] uppercase font-mono font-bold text-slate-400">Logged Hours</span>
-              <span className="text-2xl font-black font-mono text-slate-900">{loggedHoursSum} <span className="text-xs text-slate-400">/ {estimatedHoursSum} hrs</span></span>
-            </div>
-            <div className="p-2 bg-slate-50 rounded-lg text-slate-500 border border-slate-100">
-              <History className="w-5 h-5" />
-            </div>
-          </div>
-          {/* visual percentage progress */}
-          <div className="mt-4">
-            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-1">
-              <div className="bg-indigo-600 h-full" style={{ width: `${Math.min(100, (loggedHoursSum / (estimatedHoursSum || 1)) * 100)}%` }} />
-            </div>
-            <div className="flex justify-between items-center text-[10px]">
-              <span className="text-slate-400">Log utilization:</span>
-              <span className="font-bold text-slate-700">{estimatedHoursSum > 0 ? Math.round((loggedHoursSum / estimatedHoursSum) * 100) : 0}%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* KPI 3: Speed index/Performance Rate */}
-        <div className="bg-white p-5 border border-slate-200 rounded-xl">
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="block text-[10px] uppercase font-mono font-bold text-slate-400">Engineering Ratio</span>
-              <span className="text-2xl font-black font-mono text-slate-900">{performanceRate}%</span>
-            </div>
-            <div className="p-2 bg-slate-50 rounded-lg text-slate-500 border border-slate-100">
-              <Percent className="w-5 h-5 animate-pulse" />
-            </div>
-          </div>
-          <p className="text-[11px] text-slate-500 mt-4 leading-relaxed line-clamp-1">
-            {performanceRate > 100 ? 'Logged ahead of estimated milestones' : 'Within calculated bounds'}
-          </p>
         </div>
 
         {/* KPI 4: Overdue Deliveries */}

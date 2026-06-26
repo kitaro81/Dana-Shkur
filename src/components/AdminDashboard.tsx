@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Project, User, WorkflowStage, UserRole, TaskType, VisualSettings, ReportTemplateSettings, TaskTemplate, Label, Task } from '../types';
-import { Shield, Plus, Briefcase, PlusCircle, Trash, RefreshCw, Layers, Edit2, Users, Check, X, Sliders, Settings, FileText, Clock, Tag, Megaphone, Palette, AlertTriangle, Zap, Kanban } from 'lucide-react';
+import { Project, User, WorkflowStage, UserRole, TaskType, VisualSettings, ReportTemplateSettings, Label, Task, TeamActivity } from '../types';
+import { Shield, Plus, Briefcase, PlusCircle, Trash, RefreshCw, Layers, Edit2, Users, Check, X, Sliders, Settings, FileText, Clock, Tag, Megaphone, Palette, AlertTriangle, Zap, Kanban, MessageSquare, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface AdminDashboardProps {
@@ -12,8 +12,6 @@ interface AdminDashboardProps {
   onUpdateVisualSettings: (settings: VisualSettings) => void;
   reportTemplateSettings: ReportTemplateSettings;
   onUpdateReportTemplateSettings: (settings: ReportTemplateSettings) => void;
-  taskTemplates: TaskTemplate[];
-  onUpdateTaskTemplates: (templates: TaskTemplate[]) => void;
   labels: Label[];
   onAddProject: (project: Omit<Project, 'id' | 'createdAt'>) => void;
   onUpdateUserRole: (userId: string, newRole: UserRole) => void;
@@ -23,7 +21,11 @@ interface AdminDashboardProps {
   onInviteUser: (user: Omit<User, 'id' | 'joinedAt'>) => void;
   onUpdateStages: (stages: WorkflowStage[]) => void;
   onDeleteProject?: (projectId: string) => void;
+  onResetUserPassword?: (userId: string) => void;
+  onMessageUser?: (userId: string) => void;
+  onSendBulkMessage?: (userIds: string[], message: string) => void;
   tasks?: Task[];
+  activities?: TeamActivity[];
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -35,8 +37,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onUpdateVisualSettings,
   reportTemplateSettings,
   onUpdateReportTemplateSettings,
-  taskTemplates,
-  onUpdateTaskTemplates,
   labels,
   onAddProject,
   onUpdateUserRole,
@@ -46,10 +46,67 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onInviteUser,
   onUpdateStages,
   onDeleteProject,
+  onResetUserPassword,
+  onMessageUser,
+  onSendBulkMessage,
   tasks = [],
+  activities = [],
 }) => {
-  // Tabs: Flow/Stages, Team/Roles, Projects Setup, Preferences, Task Templates
-  const [activeSubTab, setActiveSubTab] = useState<'stages' | 'users' | 'projects' | 'preferences' | 'templates'>('stages');
+  // Tabs: Flow/Stages, Team/Roles, Projects Setup, Preferences
+  const [activeSubTab, setActiveSubTab] = useState<'stages' | 'users' | 'projects' | 'preferences'>('stages');
+
+  // --- Export Audit Log CSV (Last 50 Activities) ---
+  const handleExportAuditLog = () => {
+    if (!activities || activities.length === 0) {
+      alert('No system activities found to export.');
+      return;
+    }
+
+    // Get the last 50 system-wide activities
+    const last50Activities = [...activities]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 50);
+
+    // CSV header
+    const headers = ['Activity ID', 'Timestamp', 'Type', 'Actor ID', 'Actor Name', 'Title', 'Description', 'Project ID', 'Project Name', 'Task ID', 'Task Title'];
+    
+    // CSV rows
+    const rows = last50Activities.map(activity => [
+      activity.id,
+      activity.createdAt,
+      activity.type,
+      activity.userId,
+      activity.userName,
+      activity.title || '',
+      activity.description || '',
+      activity.projectId || '',
+      activity.projectName || '',
+      activity.taskId || '',
+      activity.taskTitle || ''
+    ]);
+
+    // Construct CSV content with safe escaping
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => 
+        row.map(val => {
+          const escaped = String(val).replace(/"/g, '""');
+          return `"${escaped}"`;
+        }).join(',')
+      )
+    ].join('\n');
+
+    // Create a download link and trigger it
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `nexus_compliance_audit_log_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // --- Project form state ---
   const [newProjName, setNewProjName] = useState('');
@@ -58,6 +115,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [newProjLoc, setNewProjLoc] = useState('');
   const [newProjDisciplines, setNewProjDisciplines] = useState<TaskType[]>([]);
   const [newProjAssignedUserIds, setNewProjAssignedUserIds] = useState<string[]>([]);
+  
+  // --- Bulk Message State ---
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [showBulkMessageModal, setShowBulkMessageModal] = useState(false);
+  const [bulkMessageText, setBulkMessageText] = useState('');
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUserIds(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId) 
+        : [...prev, userId]
+    );
+  };
+
+  const handleSelectAllUsers = () => {
+    if (selectedUserIds.length === users.length) {
+      setSelectedUserIds([]);
+    } else {
+      setSelectedUserIds(users.map(u => u.id));
+    }
+  };
+
+  const handleSendBulkMessageSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (onSendBulkMessage && selectedUserIds.length > 0 && bulkMessageText.trim()) {
+      onSendBulkMessage(selectedUserIds, bulkMessageText);
+      setBulkMessageText('');
+      setSelectedUserIds([]);
+      setShowBulkMessageModal(false);
+    }
+  };
 
   // --- Invite User state ---
   const [newUserName, setNewUserName] = useState('');
@@ -70,14 +158,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [newStageName, setNewStageName] = useState('');
   const [newStageColor, setNewStageColor] = useState('#F59E0B');
   const [presetToApply, setPresetToApply] = useState<'waterfall' | 'agile' | 'simple' | null>(null);
-
-  // --- Task template form state ---
-  const [newTplName, setNewTplName] = useState('');
-  const [newTplDesc, setNewTplDesc] = useState('');
-  const [newTplDuration, setNewTplDuration] = useState<number>(24);
-  const [newTplType, setNewTplType] = useState<TaskType>('architecture');
-  const [newTplPriority, setNewTplPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
-  const [newTplLabelIds, setNewTplLabelIds] = useState<string[]>([]);
 
   const isAdmin = currentUser.role === 'admin';
 
@@ -121,34 +201,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setNewUserRole('engineer');
     setNewUserDiscipline('other');
     alert('Team member registered in team credentials list!');
-  };
-
-  const handleCreateTemplate = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTplName.trim()) return;
-
-    const newTemplate: TaskTemplate = {
-      id: `tpl-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
-      name: newTplName.trim(),
-      description: newTplDesc.trim(),
-      defaultDurationHours: Number(newTplDuration) || 0,
-      type: newTplType,
-      priority: newTplPriority,
-      labelIds: newTplLabelIds,
-    };
-
-    onUpdateTaskTemplates([...taskTemplates, newTemplate]);
-
-    setNewTplName('');
-    setNewTplDesc('');
-    setNewTplDuration(24);
-    setNewTplType('architecture');
-    setNewTplPriority('medium');
-    setNewTplLabelIds([]);
-  };
-
-  const handleDeleteTemplate = (tplId: string) => {
-    onUpdateTaskTemplates(taskTemplates.filter(t => t.id !== tplId));
   };
 
   const handleSaveStages = () => {
@@ -227,8 +279,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return (
       <div className="p-6 text-center max-w-sm mx-auto bg-slate-50 border border-slate-200 rounded my-10">
         <Shield className="w-8 h-8 text-slate-400 mx-auto mb-2 animate-none" />
-        <h3 className="text-xs font-semibold text-slate-700 mb-1">Administrator Access Required</h3>
-        <p className="text-xs text-slate-500">Only Administrators can manage workspace workflow columns, roles, or add projects. Switch your active profile in the header to gain access.</p>
+        <h3 className="text-xs font-semibold text-slate-700 mb-1">{visualSettings.language === 'ckb' ? 'چوونەژوورە وەک بەڕێوەبەر پێویستە' : 'Administrator Access Required'}</h3>
+        <p className="text-xs text-slate-500">{visualSettings.language === 'ckb' ? 'تەنها بەڕێوەبەرەکان دەتوانن دەستکاری ئەم بەشە بکەن.' : 'Only Administrators can manage workspace workflow columns, roles, or add projects. Switch your active profile in the header to gain access.'}</p>
       </div>
     );
   }
@@ -237,10 +289,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     <div className="space-y-6">
       
       {/* Admin Panel Header & Sub tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-3">
-        <div>
-          <h2 className="text-sm font-bold text-slate-800">Workspace Settings</h2>
-          <p className="text-xs text-slate-400">Configure project lanes, custom member roles, and active assignments.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-4 gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div>
+            <h2 className="text-sm font-bold text-slate-800">{visualSettings.language === 'ckb' ? 'ڕێکخستنەکانی شوێنی کار' : 'Workspace Settings'}</h2>
+            <p className="text-xs text-slate-400">{visualSettings.language === 'ckb' ? 'لێرەدا دەتوانیت ڕێکخستنەکانی پڕۆژە و ئەندامان بکەیت.' : 'Configure project lanes, custom member roles, and active assignments.'}</p>
+          </div>
+          <button
+            onClick={handleExportAuditLog}
+            className="shrink-0 self-start sm:self-center px-2.5 py-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-150 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer select-none"
+            title="Download CSV containing the last 50 activities for compliance"
+          >
+            <Download className="w-3.5 h-3.5" /> Export Audit Log
+          </button>
         </div>
 
         {/* Sub tab selectors */}
@@ -251,7 +312,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               activeSubTab === 'stages' ? 'bg-white text-slate-800 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" /> Columns
+            <Layers className="w-3.5 h-3.5" /> {visualSettings.language === 'ckb' ? 'ستوونەکان' : 'Columns'}
           </button>
           
           <button
@@ -260,7 +321,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               activeSubTab === 'users' ? 'bg-white text-slate-800 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Users className="w-3.5 h-3.5" /> Members
+            <Users className="w-3.5 h-3.5" /> {visualSettings.language === 'ckb' ? 'ئەندامان' : 'Members'}
           </button>
 
           <button
@@ -269,7 +330,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               activeSubTab === 'projects' ? 'bg-white text-slate-800 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Briefcase className="w-3.5 h-3.5" /> Add Project
+            <Briefcase className="w-3.5 h-3.5" /> {visualSettings.language === 'ckb' ? 'پڕۆژە' : 'Add Project'}
           </button>
 
           <button
@@ -278,16 +339,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               activeSubTab === 'preferences' ? 'bg-white text-slate-800 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Settings className="w-3.5 h-3.5" /> Preferences
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('templates')}
-            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeSubTab === 'templates' ? 'bg-white text-slate-800 shadow-2xs' : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" /> Task Templates
+            <Settings className="w-3.5 h-3.5" /> {visualSettings.language === 'ckb' ? 'ڕێکخستنی بینین' : 'Preferences'}
           </button>
         </div>
       </div>
@@ -477,36 +529,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
 
             {/* Right side editable list of current pipeline stages */}
-            <div className="md:col-span-2 bg-white border border-slate-200 p-5 rounded-xl space-y-4">
+            <div className="flex-1 bg-white border border-slate-200 p-4 rounded-lg space-y-3 w-full">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <h3 className="text-xs uppercase font-mono font-bold text-slate-700 tracking-wider">Active Board Lane Mappings</h3>
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                <h3 className="text-xs uppercase font-bold text-slate-600">Active Board Lane Mappings</h3>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">
                   {editedStages.length} Lanes
                 </span>
               </div>
 
               <div className="space-y-2">
                 {editedStages.map((stage, index) => (
-                  <div key={stage.id} className="flex items-center gap-3 p-3 bg-slate-55 border border-slate-200 rounded-lg group">
-                    {/* Index identifier */}
-                    <span className="font-mono text-slate-400 text-xs font-bold w-4">#{index + 1}</span>
-                    
-                    {/* Color chip */}
-                    <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: stage.color }} />
+                  <div key={stage.id} className="flex items-center gap-3 p-2 bg-white border border-slate-100 rounded hover:border-slate-200 transition-all">
+                    {/* Index & Color identifier */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-slate-400 text-[10px] font-bold w-4">{index + 1}</span>
+                      <div className="w-5 h-5 rounded border border-slate-200" style={{ backgroundColor: stage.color }} />
+                    </div>
                     
                     {/* Name input */}
-                    <input
-                      type="text"
-                      className="flex-1 text-xs font-semibold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-amber-500 focus:outline-none px-1"
-                      value={stage.name}
-                      onChange={(e) => {
-                        const updated = editedStages.map(s => s.id === stage.id ? { ...s, name: e.target.value } : s);
-                        setEditedStages(updated);
-                      }}
-                    />
+                    <div className="flex-1 min-w-0">
+                      <input
+                        type="text"
+                        className="w-full text-xs font-semibold text-slate-700 bg-transparent border-none p-0 focus:ring-0"
+                        value={stage.name}
+                        onChange={(e) => {
+                          const updated = editedStages.map(s => s.id === stage.id ? { ...s, name: e.target.value } : s);
+                          setEditedStages(updated);
+                        }}
+                      />
+                    </div>
 
-                    {/* Order up/down buttons */}
-                    <div className="flex gap-1">
+                    {/* Controls */}
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => {
                           if (index === 0) return;
@@ -514,14 +568,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           const tmp = next[index];
                           next[index] = next[index - 1];
                           next[index - 1] = tmp;
-                          // fix order integers
                           setEditedStages(next.map((s, i) => ({ ...s, order: i })));
                         }}
                         disabled={index === 0}
-                        className="p-1 hover:bg-slate-200 text-slate-500 rounded disabled:opacity-30 cursor-pointer"
+                        className="p-1 hover:bg-slate-100 text-slate-400 hover:text-indigo-600 rounded disabled:opacity-20 cursor-pointer"
                         title="Move Up"
                       >
-                        ▲
+                        <Sliders className="w-3.5 h-3.5 rotate-90" />
                       </button>
                       <button
                         onClick={() => {
@@ -533,34 +586,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           setEditedStages(next.map((s, i) => ({ ...s, order: i })));
                         }}
                         disabled={index === editedStages.length - 1}
-                        className="p-1 hover:bg-slate-200 text-slate-500 rounded disabled:opacity-30 cursor-pointer"
+                        className="p-1 hover:bg-slate-100 text-slate-400 hover:text-indigo-600 rounded disabled:opacity-20 cursor-pointer"
                         title="Move Down"
                       >
-                        ▼
+                        <Sliders className="w-3.5 h-3.5 -rotate-90" />
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteStage(stage.id)}
+                        className="p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded cursor-pointer"
+                        title="Delete lane"
+                      >
+                        <Trash className="w-3.5 h-3.5" />
                       </button>
                     </div>
-
-                    {/* Delete button (only if not leading to < 2 lanes) */}
-                    <button
-                      onClick={() => handleDeleteStage(stage.id)}
-                      className="p-1 text-rose-500 hover:bg-rose-50 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                      title="Destroy lane"
-                    >
-                      <Trash className="w-3.5 h-3.5" />
-                    </button>
                   </div>
                 ))}
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex justify-end">
+              <div className="pt-3 border-t border-slate-100 flex justify-end">
                 <button
                   onClick={handleSaveStages}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded cursor-pointer"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" /> Synchronize Lanes
+                  Synchronize Lanes
                 </button>
               </div>
-
             </div>
             </div>
           </motion.div>
@@ -647,7 +698,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             {/* User List and Role Toggle panel */}
             <div className="md:col-span-2 bg-white border border-slate-200 p-5 rounded-xl space-y-4">
-              <h3 className="text-xs uppercase font-mono font-bold text-slate-700 tracking-wider border-b border-slate-100 pb-2">Corporation Team Roster & Roles</h3>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h3 className="text-xs uppercase font-mono font-bold text-slate-700 tracking-wider">Corporation Team Roster & Roles</h3>
+                
+                <div className="flex items-center gap-2">
+                  {selectedUserIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowBulkMessageModal(true)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-indigo-100 transition-colors cursor-pointer"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      Bulk Message ({selectedUserIds.length})
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleSelectAllUsers}
+                    className="px-2.5 py-1.5 bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    {selectedUserIds.length === users.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                </div>
+              </div>
               
               <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
                 {users.map(u => (
@@ -655,15 +728,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     u.deactivated 
                       ? 'bg-rose-50/10 border-dashed border-rose-200 opacity-75' 
                       : 'bg-slate-50 border-slate-100 hover:border-slate-200'
-                  }`}>
+                  } ${selectedUserIds.includes(u.id) ? 'ring-2 ring-indigo-500/20 border-indigo-200 bg-indigo-50/20' : ''}`}>
                     <div className="flex items-center gap-3">
-                      <img
-                        src={u.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'}
-                        alt={u.name}
-                        className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="min-w-0">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedUserIds.includes(u.id)}
+                          onChange={() => toggleUserSelection(u.id)}
+                          className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
+                        />
+                        <img
+                          src={u.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'}
+                          alt={u.name}
+                          className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                      <div className="min-w-0 cursor-pointer" onClick={() => toggleUserSelection(u.id)}>
                         <div className="flex items-center gap-2 font-mono">
                           <p className={`text-xs font-bold text-slate-800 truncate ${u.deactivated ? 'line-through text-slate-400 font-normal' : ''}`}>{u.name}</p>
                           {u.id === currentUser.id && (
@@ -744,6 +825,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               title={u.deactivated ? "Reactivate member account" : "Deactivate member account"}
                             >
                               {u.deactivated ? 'Activate' : 'Deactivate'}
+                            </button>
+                          )}
+                          {onMessageUser && (
+                            <button
+                              type="button"
+                              onClick={() => onMessageUser(u.id)}
+                              className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors cursor-pointer border border-transparent hover:border-indigo-100"
+                              title="Send Message"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {onResetUserPassword && (
+                            <button
+                              type="button"
+                              onClick={() => onResetUserPassword(u.id)}
+                              className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors cursor-pointer border border-transparent hover:border-indigo-100"
+                              title="Reset user password to master key"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
                             </button>
                           )}
                           {onDeleteUser && (
@@ -981,7 +1082,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       />
                       Enable Analytics & Reports
                     </label>
-                    <p className="text-[10px] text-slate-400 pl-5">Display performance summaries and hour tracking charts.</p>
+                    <p className="text-[10px] text-slate-400 pl-5">Display performance summaries and charts.</p>
                   </div>
                 </div>
 
@@ -1033,22 +1134,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
                 </div>
 
-                {/* 6. showHoursCounter */}
-                <div className="flex items-start justify-between gap-4 p-3 hover:bg-slate-50/50 rounded-lg border border-transparent hover:border-slate-100 transition-all">
-                  <div className="space-y-0.5">
-                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={visualSettings.showHoursCounter}
-                        onChange={(e) => onUpdateVisualSettings({ ...visualSettings, showHoursCounter: e.target.checked })}
-                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                      />
-                      Display Task Hours Counters
-                    </label>
-                    <p className="text-[10px] text-slate-400 pl-5">Display estimated and logged task hours on Kanban board.</p>
-                  </div>
-                </div>
-
+                {/* 6. showHoursCounter REMOVED */}
+                
                 {/* 7. showTaskTypeIcon */}
                 <div className="flex items-start justify-between gap-4 p-3 hover:bg-slate-50/50 rounded-lg border border-transparent hover:border-slate-100 transition-all">
                   <div className="space-y-0.5">
@@ -1062,6 +1149,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       Display Task Discipline Badges
                     </label>
                     <p className="text-[10px] text-slate-400 pl-5">Show specialized design/discipline badges on card faces.</p>
+                  </div>
+                </div>
+
+                {/* 8. enlargeIconSize */}
+                <div className="flex items-start justify-between gap-4 p-3 hover:bg-slate-50/50 rounded-lg border border-transparent hover:border-slate-100 transition-all">
+                  <div className="space-y-0.5">
+                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!!visualSettings.enlargeIconSize}
+                        onChange={(e) => onUpdateVisualSettings({ ...visualSettings, enlargeIconSize: e.target.checked })}
+                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      Enlarge Icon Sizes
+                    </label>
+                    <p className="text-[10px] text-slate-400 pl-5">Increase the physical scaling/size of Lucide icons across panels for accessibility.</p>
                   </div>
                 </div>
               </div>
@@ -1144,7 +1247,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       />
                       Include Stat Summaries
                     </label>
-                    <p className="text-[9px] text-slate-400 mt-1 pl-5">Show total tasks, estimations, and hours metrics.</p>
+                    <p className="text-[9px] text-slate-400 mt-1 pl-5">Show total tasks and estimation metrics.</p>
                   </div>
 
                   {/* 5. includeDisciplineBreakdown */}
@@ -1198,7 +1301,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   Workspace Branding & Custom Theme Settings
                 </h3>
                 <p className="text-[10px] text-slate-400 mt-1">
-                  Rebrand the workspace, choose custom style density, toggle themes, and select primary design colors.
+                  Rebrand the workspace, choose custom style density, and select primary design colors.
                 </p>
               </div>
 
@@ -1214,6 +1317,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white"
                   />
                   <p className="text-[9px] text-slate-400">Updates the workspace name across the header, portals, and reports.</p>
+                </div>
+
+                {/* Master Password Setting */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-indigo-500" />
+                    Team Master Password
+                  </label>
+                  <input
+                    type="password"
+                    value={visualSettings.masterPassword || ''}
+                    onChange={(e) => onUpdateVisualSettings({ ...visualSettings, masterPassword: e.target.value })}
+                    placeholder="Enter global master password"
+                    className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white"
+                  />
+                  <p className="text-[9px] text-slate-400">Allows any team member to sign in. Admins can override personal passwords using this key.</p>
                 </div>
 
                 {/* Primary Brand Accent Color */}
@@ -1370,412 +1489,81 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </div>
 
-            {/* Row 3: Agile & Scrum Management Control Center */}
-            <div className="bg-white border border-slate-200 p-5 rounded-xl space-y-4 md:col-span-2 text-left">
-              <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
-                <div>
-                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <Zap className="w-4 h-4 text-amber-500" />
-                    Agile Scrum Management Control Center
-                  </h3>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Fine-tune your Agile delivery settings, sprint capacity, estimation metrics, and active project sprint health checks.
-                  </p>
-                </div>
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-850 flex items-center gap-1 font-mono uppercase">
-                  ⚡ Scrum Config
-                </span>
-              </div>
 
-              <div className="grid md:grid-cols-3 gap-6">
-                {/* Column 1: Sprint & Goal Configurations */}
-                <div className="space-y-4">
-                  <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">1. Sprint Cadence & Goals</h4>
-                  
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Sprint Iteration Length</label>
-                    <select
-                      value={visualSettings.agileSprintDurationWeeks || 2}
-                      onChange={(e) => onUpdateVisualSettings({ ...visualSettings, agileSprintDurationWeeks: Number(e.target.value) })}
-                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white cursor-pointer"
-                    >
-                      <option value={1}>1 Week (Fast Iterations)</option>
-                      <option value={2}>2 Weeks (Standard Scrum)</option>
-                      <option value={3}>3 Weeks (Medium Cycle)</option>
-                      <option value={4}>4 Weeks (Monthly Sprint)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Active Sprint Goal</label>
-                    <textarea
-                      value={visualSettings.agileSprintGoal || ''}
-                      onChange={(e) => onUpdateVisualSettings({ ...visualSettings, agileSprintGoal: e.target.value })}
-                      rows={3}
-                      placeholder="e.g., Deliver core blueprints, complete Q/C checkups, and obtain structural engineer stamp."
-                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white resize-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Column 2: Estimation & Strict Validation */}
-                <div className="space-y-4">
-                  <h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">2. Metrics & Guardrails</h4>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Core Estimation Metric</label>
-                    <select
-                      value={visualSettings.agileEstimationMetric || 'story_points'}
-                      onChange={(e) => onUpdateVisualSettings({ ...visualSettings, agileEstimationMetric: e.target.value as any })}
-                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white cursor-pointer"
-                    >
-                      <option value="story_points">Story Points (Fibonacci: 1, 2, 3, 5, 8, 13)</option>
-                      <option value="hours">Man-Hours (Traditional hours)</option>
-                      <option value="t_shirt">T-Shirt Sizing (S, M, L, XL)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Sprint Backlog Capacity Limit</label>
-                    <input
-                      type="number"
-                      value={visualSettings.agileTargetCapacity || 40}
-                      onChange={(e) => onUpdateVisualSettings({ ...visualSettings, agileTargetCapacity: Number(e.target.value) || 0 })}
-                      placeholder="e.g. 40"
-                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white"
-                    />
-                  </div>
-
-                  <div className="space-y-2 pt-1">
-                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={!!visualSettings.agileRequireStoryPoints}
-                        onChange={(e) => onUpdateVisualSettings({ ...visualSettings, agileRequireStoryPoints: e.target.checked })}
-                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                      />
-                      Enforce Mandatory Estimation
-                    </label>
-                    <p className="text-[9px] text-slate-400 pl-5">Block moving tasks out of backlog stages until they have an estimation value assigned.</p>
-                  </div>
-                </div>
-
-                {/* Column 3: Live Sprint Health Diagnostic */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between text-left">
-                  <div>
-                    <span className="text-[9px] font-bold text-amber-700 bg-amber-100/85 px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">
-                      System Diagnosis
-                    </span>
-                    
-                    {/* Calculate Active Sprint metrics across tasks */}
-                    {(() => {
-                      // Find tasks belonging to "Active Sprint" (or column with ID containing 'sprint' or the 2nd stage)
-                      const sprintStageId = stages.find(s => s.id.toLowerCase().includes('sprint') || s.id.toLowerCase().includes('progress'))?.id || stages[1]?.id || 'sprint';
-                      const activeSprintTasks = tasks.filter(t => t.stageId === sprintStageId && !t.archived);
-                      
-                      let currentLoad = 0;
-                      let metricName = 'Story Points';
-                      
-                      if (visualSettings.agileEstimationMetric === 'hours') {
-                        currentLoad = activeSprintTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
-                        metricName = 'Man-Hours';
-                      } else if (visualSettings.agileEstimationMetric === 't_shirt') {
-                        const tShirtMapping = { 'S': 1, 'M': 3, 'L': 5, 'XL': 8 };
-                        currentLoad = activeSprintTasks.reduce((sum, t) => sum + (tShirtMapping[t.tShirtSize || 'M'] || 3), 0);
-                        metricName = 'T-Shirt Weight (pts)';
-                      } else {
-                        currentLoad = activeSprintTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
-                        metricName = 'Story Points';
-                      }
-                      
-                      const targetCapacity = visualSettings.agileTargetCapacity || 40;
-                      const percentage = targetCapacity > 0 ? Math.min(100, Math.round((currentLoad / targetCapacity) * 100)) : 0;
-                      const isOverloaded = currentLoad > targetCapacity;
-                      
-                      return (
-                        <div className="mt-3.5 space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-[10px] text-slate-500 font-medium">Sprint Lane Status</span>
-                            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${isOverloaded ? 'bg-rose-100 text-rose-800 animate-pulse' : 'bg-emerald-100 text-emerald-800'}`}>
-                              {isOverloaded ? '⚠️ OVERLOADED' : '🟢 HEALTHY LOAD'}
-                            </span>
-                          </div>
-
-                          <div className="bg-white border border-slate-150 p-2.5 rounded-lg space-y-2">
-                            <div className="flex justify-between text-[11px]">
-                              <span className="font-semibold text-slate-700">Sprint Load ({metricName}):</span>
-                              <span className="font-bold text-slate-900 font-mono">{currentLoad} / {targetCapacity}</span>
-                            </div>
-                            
-                            {/* Bar */}
-                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                              <div 
-                                className={`h-full transition-all duration-300 ${isOverloaded ? 'bg-rose-500' : 'bg-indigo-600'}`}
-                                style={{ width: `${percentage}%` }}
-                              />
-                            </div>
-                            
-                            <div className="flex justify-between text-[8px] text-slate-400 font-mono">
-                              <span>0%</span>
-                              <span>Target Capacity ({targetCapacity})</span>
-                              <span>100%</span>
-                            </div>
-                          </div>
-
-                          <div className="text-[10px] text-slate-500 leading-normal space-y-1">
-                            <p>👉 <strong className="text-slate-700 font-bold">Sprint Cadence:</strong> Every <strong className="text-slate-700">{visualSettings.agileSprintDurationWeeks || 2} weeks</strong>.</p>
-                            <p>👉 <strong className="text-slate-700 font-bold">Task Count:</strong> <strong className="text-indigo-600 font-semibold">{activeSprintTasks.length} tasks</strong> actively committed.</p>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                  
-                  <p className="text-[9px] text-slate-400 leading-relaxed mt-2">
-                    Tip: Target Capacity is used as a soft guardrail. Moving cards into the active sprint beyond this capacity will trigger a system overload warning.
-                  </p>
-                </div>
-              </div>
-            </div>
 
           </motion.div>
         )}
 
-        {activeSubTab === 'templates' && (
-          <motion.div
-            key="templates"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.2 }}
-            className="grid grid-cols-1 lg:grid-cols-3 gap-6"
-          >
-            {/* Left Column: Form to create a new template */}
-            <div className="lg:col-span-1 space-y-6">
-              <div className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-xs">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
-                    <PlusCircle className="w-4 h-4" />
+      </AnimatePresence>
+      
+      {/* Bulk Message Modal */}
+      <AnimatePresence>
+        {showBulkMessageModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowBulkMessageModal(false)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200"
+            >
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                    <MessageSquare className="w-4 h-4" />
                   </div>
-                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">New Task Template</h3>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">Send Bulk Message</h3>
+                    <p className="text-[10px] text-slate-500 font-mono tracking-wider">RECIPIENTS: {selectedUserIds.length} SELECTED MEMBERS</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowBulkMessageModal(false)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSendBulkMessageSubmit} className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Message Content</label>
+                  <textarea
+                    required
+                    value={bulkMessageText}
+                    onChange={(e) => setBulkMessageText(e.target.value)}
+                    placeholder="Type your announcement or unified message here..."
+                    className="w-full h-40 text-sm px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all resize-none bg-slate-50/30"
+                  />
+                  <p className="text-[10px] text-slate-400">This message will be sent individually to all selected team members.</p>
                 </div>
 
-                <form onSubmit={handleCreateTemplate} className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Template Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={newTplName}
-                      onChange={(e) => setNewTplName(e.target.value)}
-                      placeholder="e.g., Structural Drawing Review"
-                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Predefined Description</label>
-                    <textarea
-                      value={newTplDesc}
-                      onChange={(e) => setNewTplDesc(e.target.value)}
-                      placeholder="Detailed instructions or scope of work for this task..."
-                      rows={4}
-                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white resize-none"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Discipline</label>
-                      <select
-                        value={newTplType}
-                        onChange={(e) => setNewTplType(e.target.value as TaskType)}
-                        className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white cursor-pointer"
-                      >
-                        <option value="architecture">Architecture</option>
-                        <option value="structure">Structure</option>
-                        <option value="electric">Electric</option>
-                        <option value="mechanical">Mechanical</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Default Duration (Hrs)</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={newTplDuration}
-                        onChange={(e) => setNewTplDuration(Math.max(0, parseInt(e.target.value) || 0))}
-                        className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Priority</label>
-                    <select
-                      value={newTplPriority}
-                      onChange={(e) => setNewTplPriority(e.target.value as any)}
-                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white cursor-pointer"
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="critical">Critical</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1.5">Predefined Labels</label>
-                    <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-slate-50 border border-slate-200 rounded-lg">
-                      {labels.map((label) => {
-                        const isChecked = newTplLabelIds.includes(label.id);
-                        return (
-                          <label
-                            key={label.id}
-                            className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold border cursor-pointer transition-all ${
-                              isChecked
-                                ? 'bg-white border-slate-350 shadow-2xs text-slate-800'
-                                : 'bg-slate-100/50 border-slate-200 text-slate-500 hover:bg-slate-100'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setNewTplLabelIds([...newTplLabelIds, label.id]);
-                                } else {
-                                  setNewTplLabelIds(newTplLabelIds.filter((id) => id !== label.id));
-                                }
-                              }}
-                              className="sr-only"
-                            />
-                            <span
-                              className="w-2 h-2 rounded-full inline-block mr-1"
-                              style={{ backgroundColor: label.color }}
-                            />
-                            {label.name}
-                          </label>
-                        );
-                      })}
-                      {labels.length === 0 && (
-                        <p className="text-[10px] text-slate-400">No workspace labels defined yet.</p>
-                      )}
-                    </div>
-                  </div>
-
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowBulkMessageModal(false)}
+                    className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer uppercase tracking-wider"
+                  >
+                    Cancel
+                  </button>
                   <button
                     type="submit"
-                    className="w-full bg-slate-900 hover:bg-slate-850 text-white font-semibold py-2 px-3 rounded-lg text-xs cursor-pointer transition-colors shadow-2xs flex items-center justify-center gap-1.5"
+                    disabled={!bulkMessageText.trim()}
+                    className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold rounded-lg shadow-lg shadow-indigo-100 transition-all cursor-pointer uppercase tracking-wider flex items-center gap-2"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Save Template
+                    <Zap className="w-3.5 h-3.5" />
+                    Dispatch Messages
                   </button>
-                </form>
-              </div>
-            </div>
-
-            {/* Right Column: List of existing templates */}
-            <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-xs">
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4">Workspace Task Templates</h3>
-
-                <div className="space-y-3">
-                  {taskTemplates.map((tpl) => (
-                    <div
-                      key={tpl.id}
-                      className="p-4 border border-slate-200/80 hover:border-slate-300 rounded-xl bg-gradient-to-r from-white to-slate-50/30 transition-all flex flex-col md:flex-row md:items-start justify-between gap-4"
-                    >
-                      <div className="space-y-2 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="text-sm font-semibold text-slate-800">{tpl.name}</h4>
-                          <span
-                            className={`text-[9px] capitalize px-1.5 py-0.5 rounded-full font-medium border ${
-                              tpl.type === 'architecture'
-                                ? 'bg-red-50 text-red-600 border-red-100'
-                                : tpl.type === 'structure'
-                                ? 'bg-blue-50 text-blue-600 border-blue-100'
-                                : tpl.type === 'electric'
-                                ? 'bg-indigo-50 text-indigo-600 border-indigo-100'
-                                : tpl.type === 'mechanical'
-                                ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                                : 'bg-slate-50 text-slate-500 border-slate-100'
-                            }`}
-                          >
-                            {tpl.type}
-                          </span>
-                          <span
-                            className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full capitalize ${
-                              tpl.priority === 'critical'
-                                ? 'bg-red-100 text-red-700'
-                                : tpl.priority === 'high'
-                                ? 'bg-orange-100 text-orange-700'
-                                : tpl.priority === 'medium'
-                                ? 'bg-slate-100 text-slate-700'
-                                : 'bg-slate-50 text-slate-500'
-                            }`}
-                          >
-                            {tpl.priority} priority
-                          </span>
-                        </div>
-
-                        {tpl.description && (
-                          <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                            {tpl.description}
-                          </p>
-                        )}
-
-                        <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-400 pt-1">
-                          <div className="flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5 text-slate-400" />
-                            <span>{tpl.defaultDurationHours} estimated hours</span>
-                          </div>
-
-                          {tpl.labelIds && tpl.labelIds.length > 0 && (
-                            <div className="flex items-center gap-1.5">
-                              <Tag className="w-3.5 h-3.5 text-slate-400" />
-                              <div className="flex gap-1">
-                                {tpl.labelIds.map((lId) => {
-                                  const lbl = labels.find((l) => l.id === lId);
-                                  if (!lbl) return null;
-                                  return (
-                                    <span
-                                      key={lId}
-                                      className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-semibold text-white"
-                                      style={{ backgroundColor: lbl.color }}
-                                    >
-                                      {lbl.name}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => handleDeleteTemplate(tpl.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors self-end md:self-start cursor-pointer border border-transparent hover:border-red-100"
-                        title="Delete Template"
-                      >
-                        <Trash className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-
-                  {taskTemplates.length === 0 && (
-                    <div className="text-center py-8 border border-dashed border-slate-200 rounded-xl">
-                      <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                      <p className="text-xs text-slate-400 font-medium">No custom templates defined yet.</p>
-                      <p className="text-[10px] text-slate-400 mt-1">Use the builder form on the left to add templates.</p>
-                    </div>
-                  )}
                 </div>
-              </div>
-            </div>
-          </motion.div>
+              </form>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

@@ -106,7 +106,6 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
       });
 
       const totalTasks = assignedTasks.length;
-      const totalHours = assignedTasks.reduce((sum, task) => sum + (task.estimatedHours || 0), 0);
       
       // Determine over-allocation
       const isOverAllocated = totalTasks > taskThreshold;
@@ -118,7 +117,6 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
         tasks: assignedTasks,
         stageCounts,
         totalTasks,
-        totalHours,
         isOverAllocated,
         loadRatio
       };
@@ -140,7 +138,6 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
     const totalUsers = userLoads.length;
     const overAllocatedCount = userLoads.filter(ul => ul.isOverAllocated).length;
     const totalActiveTasks = userLoads.reduce((sum, ul) => sum + ul.totalTasks, 0);
-    const totalHours = userLoads.reduce((sum, ul) => sum + ul.totalHours, 0);
     const averageLoadPercent = totalUsers > 0 
       ? Math.round(userLoads.reduce((sum, ul) => sum + ul.loadRatio, 0) / totalUsers)
       : 0;
@@ -149,7 +146,6 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
       totalUsers,
       overAllocatedCount,
       totalActiveTasks,
-      totalHours,
       averageLoadPercent
     };
   }, [userLoads]);
@@ -178,17 +174,17 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-white dark:bg-slate-900 p-3 border border-slate-200 dark:border-slate-800 rounded-lg shadow-md text-xs space-y-1.5">
-          <p className="font-bold text-slate-800 dark:text-slate-100">{data.fullName}</p>
-          <div className="border-t border-slate-100 dark:border-slate-800 pt-1.5 space-y-1">
-            <p className="text-slate-600 dark:text-slate-350">
+        <div className="bg-white p-3 border border-slate-200 rounded-lg shadow-md text-xs space-y-1.5">
+          <p className="font-bold text-slate-800">{data.fullName}</p>
+          <div className="border-t border-slate-100 pt-1.5 space-y-1">
+            <p className="text-slate-600">
               <span className="font-semibold">Total Tasks:</span> {data['Total Tasks']} / {taskThreshold}
             </p>
-            <p className="text-slate-500 dark:text-slate-400">
+            <p className="text-slate-500">
               <span className="font-semibold">Capacity Used:</span> {data.ratio}%
             </p>
             <div className="pt-1 text-[10px] space-y-0.5 font-mono text-slate-500">
-              <p className="font-bold border-b border-slate-100 dark:border-slate-800 pb-0.5 mb-1 uppercase tracking-wider">Stages breakdown:</p>
+              <p className="font-bold border-b border-slate-100 pb-0.5 mb-1 uppercase tracking-wider">Stages breakdown:</p>
               {stages.map(s => {
                 const count = data[s.name] || 0;
                 if (count === 0) return null;
@@ -210,13 +206,13 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
   return (
     <div className="space-y-6">
       {/* Header Panel */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200">
         <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <Users className="w-5 h-5 text-indigo-600" />
             Resource Allocation & Capacity Load
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             Identify bottleneck stages, track task distribution per team member, and visualize potential over-allocations.
           </p>
         </div>
@@ -227,27 +223,27 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
         {/* Card 1: Over-allocated resources */}
         <div className={`p-4 rounded-xl border transition-all ${
           stats.overAllocatedCount > 0 
-            ? 'bg-red-50/50 dark:bg-red-950/10 border-red-200 dark:border-red-900/30' 
-            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+            ? 'bg-red-50/50 border-red-200' 
+            : 'bg-white border-slate-200'
         }`}>
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Over-allocated Team</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Over-allocated Team</p>
               <h3 className={`text-2xl font-bold mt-1 ${
-                stats.overAllocatedCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-white'
+                stats.overAllocatedCount > 0 ? 'text-red-600' : 'text-slate-900'
               }`}>
                 {stats.overAllocatedCount} <span className="text-xs font-normal text-slate-400">/ {stats.totalUsers}</span>
               </h3>
             </div>
             <div className={`p-2 rounded-lg ${
               stats.overAllocatedCount > 0 
-                ? 'bg-red-100 dark:bg-red-950/40 text-red-600' 
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                ? 'bg-red-100 text-red-600' 
+                : 'bg-slate-100 text-slate-500'
             }`}>
               <AlertTriangle className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-2.5">
+          <p className="text-[10px] text-slate-500 mt-2.5">
             {stats.overAllocatedCount > 0 
               ? `${stats.overAllocatedCount} members exceed maximum ${taskThreshold} tasks limit.`
               : 'All active team members are within bounds.'}
@@ -255,19 +251,19 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
         </div>
 
         {/* Card 2: Avg load capacity */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl">
+        <div className="bg-white border border-slate-200 p-4 rounded-xl">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Average Capacity Used</p>
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Average Capacity Used</p>
+              <h3 className="text-2xl font-bold text-slate-900 mt-1">
                 {stats.averageLoadPercent}%
               </h3>
             </div>
-            <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600">
+            <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-3.5">
+          <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3.5">
             <div 
               className={`h-1.5 rounded-full ${
                 stats.averageLoadPercent > 100 ? 'bg-red-500' : stats.averageLoadPercent > 80 ? 'bg-amber-500' : 'bg-indigo-500'
@@ -278,19 +274,19 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
         </div>
 
         {/* Card 3: Total active tasks */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl">
+        <div className="bg-white border border-slate-200 p-4 rounded-xl">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Current Monitored Load</p>
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Monitored Load</p>
+              <h3 className="text-2xl font-bold text-slate-900 mt-1">
                 {stats.totalActiveTasks} <span className="text-xs font-normal text-slate-400">Tasks</span>
               </h3>
             </div>
-            <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600">
+            <div className="p-2 rounded-lg bg-slate-100 text-slate-600">
               <Layers className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-2.5">
+          <p className="text-[10px] text-slate-500 mt-2.5">
             {excludeCompleted ? 'Excluding closed/delivered stages' : 'Including all workflow stages'}
           </p>
         </div>
@@ -300,16 +296,16 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Interactive Threshold Configuration Panel */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-xl space-y-5 h-fit">
-          <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono flex items-center gap-1.5 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+        <div className="bg-white border border-slate-200 p-5 rounded-xl space-y-5 h-fit">
+          <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono flex items-center gap-1.5 border-b border-slate-100 pb-2.5">
             <Sliders className="w-4 h-4 text-slate-400" /> Capacity Parameters
           </h3>
 
           {/* Metric Selector Slider */}
           <div className="space-y-2">
-            <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-450">
+            <div className="flex justify-between text-xs font-bold text-slate-600">
               <span>Max Active Tasks / Member</span>
-              <span className="text-indigo-600 px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-950/50 rounded font-mono">
+              <span className="text-indigo-600 px-1.5 py-0.5 bg-indigo-50 rounded font-mono">
                 {taskThreshold} Tasks
               </span>
             </div>
@@ -328,7 +324,7 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
           </div>
 
           {/* Toggle stage active load */}
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
+          <div className="pt-2 border-t border-slate-100 space-y-3">
             <label className="flex items-center gap-2 cursor-pointer">
               <input 
                 type="checkbox"
@@ -336,7 +332,7 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
                 onChange={(e) => setExcludeCompleted(e.target.checked)}
                 className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
               />
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-350 select-none">
+              <span className="text-xs font-semibold text-slate-700 select-none">
                 Exclude Closed/Completed Stages
               </span>
             </label>
@@ -346,7 +342,7 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
           </div>
 
           {/* Filters Panel */}
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+          <div className="pt-4 border-t border-slate-100 space-y-3">
             <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
               <Filter className="w-3 h-3" /> Filter Resources
             </h4>
@@ -356,7 +352,7 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
               <input
                 type="text"
                 placeholder="Search member name..."
-                className="w-full text-xs px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                className="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -365,7 +361,7 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
             {/* Role Filter dropdown */}
             <div>
               <select
-                className="w-full text-xs px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 text-slate-700 dark:text-slate-300"
+                className="w-full text-xs px-2 py-1.5 bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 text-slate-700"
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
               >
@@ -379,7 +375,7 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
             {/* Project Filter dropdown */}
             <div>
               <select
-                className="w-full text-xs px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 text-slate-700 dark:text-slate-300"
+                className="w-full text-xs px-2 py-1.5 bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-400 text-slate-700"
                 value={projectFilter}
                 onChange={(e) => setProjectFilter(e.target.value)}
               >
@@ -393,9 +389,9 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
         </div>
 
         {/* Visualized Stacked Stage Chart */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-xl flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-white border border-slate-200 p-5 rounded-xl flex flex-col justify-between">
           <div className="space-y-1">
-            <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono">
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono">
               Tasks Distribution Across Pipeline
             </h3>
             <p className="text-[10px] text-slate-400">
@@ -464,12 +460,12 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
       </div>
 
       {/* Detailed Allocations Breakdown Table */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-2xs">
-        <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
-          <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+          <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono">
             Active Workload Audit Grid
           </h3>
-          <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-mono px-2 py-0.5 rounded">
+          <span className="text-[10px] bg-slate-100 text-slate-500 font-mono px-2 py-0.5 rounded">
             Filtered: {filteredUserLoads.length} Members
           </span>
         </div>
@@ -477,7 +473,7 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-800 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider font-mono bg-slate-50/30 dark:bg-slate-900/30">
+              <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono bg-slate-50/30">
                 <th className="py-3 px-4">Team Member</th>
                 <th className="py-3 px-4">Discipline</th>
                 <th className="py-3 px-4 text-center">Active Tasks</th>
@@ -485,12 +481,12 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
                 <th className="py-3 px-4 text-right">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+            <tbody className="divide-y divide-slate-100 text-xs">
               {filteredUserLoads.map(ul => {
                 const isOver = ul.isOverAllocated;
                 
                 return (
-                  <tr key={ul.user.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-900/20 transition-colors">
+                  <tr key={ul.user.id} className="hover:bg-slate-50/40 transition-colors">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
                         <img 
@@ -499,7 +495,7 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
                           className="w-7 h-7 rounded-full object-cover ring-1 ring-slate-100"
                         />
                         <div>
-                          <p className="font-bold text-slate-800 dark:text-slate-250">{ul.user.name}</p>
+                          <p className="font-bold text-slate-800">{ul.user.name}</p>
                           <p className="text-[10px] text-slate-400">{ul.user.email}</p>
                         </div>
                       </div>
@@ -517,7 +513,7 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
                         <div className="flex justify-between text-[10px] font-semibold text-slate-500 font-mono">
                           <span>{Math.round(ul.loadRatio)}% Used</span>
                         </div>
-                        <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                           <div 
                             className={`h-full rounded-full transition-all ${
                               isOver 
@@ -533,15 +529,15 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
                     </td>
                     <td className="py-3 px-4 text-right">
                       {isOver ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 px-2.5 py-1 rounded-full border border-red-200/50">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-50 px-2.5 py-1 rounded-full border border-red-200/50">
                           <AlertTriangle className="w-3.5 h-3.5" /> OVERLOADED
                         </span>
                       ) : ul.totalTasks === 0 ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-400 bg-slate-50 dark:bg-slate-800/40 px-2.5 py-1 rounded-full">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full">
                           Unallocated
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/10 px-2.5 py-1 rounded-full border border-emerald-100/50">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100/50">
                           <CheckCircle className="w-3.5 h-3.5" /> OPTIMAL
                         </span>
                       )}

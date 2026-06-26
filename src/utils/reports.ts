@@ -49,8 +49,6 @@ export function exportTasksToCSV(
     'Workflow Stage',
     'Priority',
     'Assigned To',
-    'Est. Hours',
-    'Logged Hours',
     'Due Date',
     'Updated At'
   ];
@@ -70,8 +68,6 @@ export function exportTasksToCSV(
       `"${stage?.name || task.stageId}"`,
       `"${task.priority.toUpperCase()}"`,
       `"${user?.name || 'Unassigned'}"`,
-      task.estimatedHours,
-      task.loggedHours,
       task.dueDate,
       task.updatedAt.split('T')[0]
     ];
@@ -124,8 +120,6 @@ export function printReportHTML(
   const footerVal = templateSettings?.footerText || 'Design Project Kanban Ledger. Generated automatically.';
 
   const totalTasks = tasks.length;
-  const totalEst = tasks.reduce((sum, t) => sum + t.estimatedHours, 0);
-  const totalLog = tasks.reduce((sum, t) => sum + t.loggedHours, 0);
   
   const overdueCount = tasks.filter(t => {
     if (t.stageId === 'approved') return false; 
@@ -177,7 +171,7 @@ export function printReportHTML(
         }
         .grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          grid-template-columns: repeat(2, 1fr);
           gap: 20px;
           margin-bottom: 40px;
         }
@@ -262,14 +256,6 @@ export function printReportHTML(
           <div class="stat-value">${totalTasks}</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Total Estimated Hours</div>
-          <div class="stat-value">${totalEst} hrs</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Total Logged Hours</div>
-          <div class="stat-value">${totalLog} hrs</div>
-        </div>
-        <div class="stat-card">
           <div class="stat-label">Overdue Tasks</div>
           <div class="stat-value" style="color: ${overdueCount > 0 ? '#b91c1c' : '#0f172a'}">${overdueCount}</div>
         </div>
@@ -307,13 +293,11 @@ export function printReportHTML(
         <thead>
           <tr>
             <th style="width: 8%">ID</th>
-            <th style="width: 25%">Task Title</th>
-            <th style="width: 13%">Discipline</th>
-            <th style="width: 14%">Stage</th>
+            <th style="width: 35%">Task Title</th>
+            <th style="width: 15%">Discipline</th>
+            <th style="width: 15%">Stage</th>
             <th style="width: 15%">Assigned To</th>
-            <th style="width: 8%">Est. Hrs</th>
-            <th style="width: 8%">Log. Hrs</th>
-            <th style="width: 9%">Due Date</th>
+            <th style="width: 12%">Due Date</th>
           </tr>
         </thead>
         <tbody>
@@ -337,8 +321,6 @@ export function printReportHTML(
                 <td><span class="badge ${badgeClass}">${t.type}</span></td>
                 <td>${stage?.name || t.stageId}</td>
                 <td>${user?.name || 'Unassigned'}</td>
-                <td>${t.estimatedHours}</td>
-                <td>${t.loggedHours}</td>
                 <td style="color: ${!t.stageId.includes('approved') && new Date(t.dueDate) < new Date() ? '#b91c1c' : '#1e293b'}">${t.dueDate}</td>
               </tr>
             `;

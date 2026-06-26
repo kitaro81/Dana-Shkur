@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Task, User, Comment, UserRole, TaskType, Label } from '../types';
-import { Tag } from 'lucide-react';
-import { X, Calendar, User as UserIcon, Clock, MessageSquare, Plus, AlignLeft, AlertTriangle, Link, FileText, Trash } from 'lucide-react';
+import { Task, User, Comment, UserRole, TaskType, Label, VisualSettings } from '../types';
+import { Tag, X, Calendar, User as UserIcon, Clock, MessageSquare, Plus, AlignLeft, AlertTriangle, Link, FileText, Trash, ChevronRight, ChevronLeft } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 
 interface TaskDetailsModalProps {
@@ -17,6 +16,10 @@ interface TaskDetailsModalProps {
   onAddComment: (taskId: string, commentText: string) => void;
   onDeleteComment: (commentId: string) => void;
   onDeleteTask: (taskId: string) => void;
+  onToggleArchiveTask?: (taskId: string) => void;
+  onMessageUser?: (userId: string) => void;
+  flowPermissions?: any;
+  visualSettings?: VisualSettings;
 }
 
 export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
@@ -32,12 +35,15 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
   onAddComment,
   onDeleteComment,
   onDeleteTask,
+  onToggleArchiveTask,
+  onMessageUser,
+  flowPermissions,
+  visualSettings,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [commentText, setCommentText] = useState('');
   
-  // Hours logger state
-  const [logHoursInput, setLogHoursInput] = useState('');
+  // Hours logger state REMOVED
   
   // Task Editing states
   const [editedTitle, setEditedTitle] = useState(task.title);
@@ -45,7 +51,6 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
   const [editedPriority, setEditedPriority] = useState(task.priority);
   const [editedType, setEditedType] = useState<TaskType>(task.type);
   const [editedAssignedTo, setEditedAssignedTo] = useState(task.assignedTo || '');
-  const [editedEstHours, setEditedEstHours] = useState(task.estimatedHours);
   const [editedDueDate, setEditedDueDate] = useState(task.dueDate);
 
   // Task Labels state
@@ -201,7 +206,6 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
       priority: editedPriority,
       type: editedType,
       assignedTo: editedAssignedTo || undefined,
-      estimatedHours: Number(editedEstHours),
       dueDate: editedDueDate,
       labelIds: taskLabelIds,
       dependencies: taskDependencies,
@@ -209,19 +213,6 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
       updatedAt: new Date().toISOString(),
     });
     setIsEditing(false);
-  };
-
-  const handleLogHours = (e: React.FormEvent) => {
-    e.preventDefault();
-    const hours = Number(logHoursInput);
-    if (isNaN(hours) || hours <= 0) return;
-
-    onUpdateTask({
-      ...task,
-      loggedHours: task.loggedHours + hours,
-      updatedAt: new Date().toISOString(),
-    });
-    setLogHoursInput('');
   };
 
   const submitComment = (e: React.FormEvent) => {
@@ -259,7 +250,7 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
               task.priority === 'medium' ? 'bg-slate-100 text-slate-700 border-slate-200' :
               'bg-slate-50 text-slate-500 border-slate-100'
             }`}>
-              {task.priority} Priority
+              {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)} Priority
             </span>
           </div>
           <button 
@@ -304,7 +295,7 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                   className="space-y-4"
                 >
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Task Title</label>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Title</label>
                     <input
                       type="text"
                       className="w-full text-base font-medium px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 bg-white"
@@ -358,17 +349,6 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Estimated Hours</label>
-                      <input
-                        type="number"
-                        min="1"
-                        className="w-full text-sm px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 bg-white"
-                        value={editedEstHours}
-                        onChange={(e) => setEditedEstHours(Number(e.target.value))}
-                      />
-                    </div>
-
-                    <div>
                       <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Due Date</label>
                       <input
                         type="date"
@@ -380,7 +360,7 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Designated Owner / Assignee</label>
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Assignee</label>
                     <select
                       className="w-full text-sm px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 bg-white"
                       value={editedAssignedTo}
@@ -704,30 +684,42 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
             <div className="space-y-2">
               <span className="text-[10px] uppercase font-mono text-slate-400 font-bold tracking-wider block">Assigned Lead</span>
               {assignedUser ? (
-                <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                  <img
-                    src={assignedUser.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'}
-                    alt={assignedUser.name}
-                    className="w-10 h-10 rounded-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 truncate">{assignedUser.name}</p>
-                    <div className="flex flex-wrap gap-1 mt-0.5">
-                      <span className="text-[10px] font-mono text-slate-500 uppercase">{assignedUser.role.replace('_', ' ')}</span>
-                      {assignedUser.discipline && (
-                        <span className={`text-[9px] uppercase px-1 rounded font-bold border ${
-                          assignedUser.discipline === 'architecture' ? 'bg-red-50 text-red-600 border-red-100' :
-                          assignedUser.discipline === 'structure' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                          assignedUser.discipline === 'electric' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                          assignedUser.discipline === 'mechanical' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                          'bg-slate-50 text-slate-500 border-slate-100'
-                        }`}>
-                          {assignedUser.discipline}
-                        </span>
-                      )}
+                <div className="flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={assignedUser.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'}
+                      alt={assignedUser.name}
+                      className="w-10 h-10 rounded-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{assignedUser.name}</p>
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        <span className="text-[10px] font-mono text-slate-500 uppercase">{assignedUser.role.replace('_', ' ')}</span>
+                        {assignedUser.discipline && (
+                          <span className={`text-[9px] uppercase px-1 rounded font-bold border ${
+                            assignedUser.discipline === 'architecture' ? 'bg-red-50 text-red-600 border-red-100' :
+                            assignedUser.discipline === 'structure' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                            assignedUser.discipline === 'electric' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                            assignedUser.discipline === 'mechanical' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                            'bg-slate-50 text-slate-500 border-slate-100'
+                          }`}>
+                            {assignedUser.discipline}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
+                  {onMessageUser && assignedUser.id !== currentUser.id && (
+                    <button
+                      type="button"
+                      onClick={() => onMessageUser(assignedUser.id)}
+                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-100 hover:border-indigo-100 rounded-lg transition-all cursor-pointer"
+                      title="Send instant message to lead"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="flex items-center gap-2 p-3 bg-slate-50 text-slate-400 rounded-lg border border-dashed border-slate-200">
@@ -970,58 +962,6 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Hours Accountability / Time tracking */}
-            <div className="space-y-3 pt-4 border-t border-slate-100">
-              <span className="text-[10px] uppercase text-slate-400 font-semibold tracking-wide block">Time Tracker</span>
-              
-              <div className="grid grid-cols-2 gap-2 text-center">
-                <div className="bg-slate-50 p-2 rounded border border-slate-100">
-                  <span className="block text-[10px] uppercase font-semibold text-slate-400 mb-0.5">Estimated</span>
-                  <span className="text-sm font-bold text-slate-800">{task.estimatedHours} hrs</span>
-                </div>
-                <div className={`p-2 rounded border ${task.loggedHours > task.estimatedHours ? 'bg-orange-50 border-orange-100' : 'bg-slate-50 border-slate-100'}`}>
-                  <span className="block text-[10px] uppercase font-semibold text-slate-400 mb-0.5">Logged</span>
-                  <span className="text-sm font-bold text-slate-800">{task.loggedHours} hrs</span>
-                </div>
-              </div>
-
-              {/* Progress visual bar */}
-              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full rounded-full ${task.loggedHours > task.estimatedHours ? 'bg-orange-500' : 'bg-indigo-600'}`}
-                  style={{ width: `${Math.min(100, (task.loggedHours / (task.estimatedHours || 1)) * 100)}%` }}
-                />
-              </div>
-
-              {/* Log Hours Action (Allowed for assigned lead, engineer, and above) */}
-              {(isAuthorizedToEdit || isEngineer) && (
-                <form onSubmit={handleLogHours} className="pt-2">
-                  <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Add hours</label>
-                  <div className="flex gap-1.5">
-                    <div className="relative flex-1">
-                      <input
-                        type="number"
-                        min="0.5"
-                        step="0.5"
-                        placeholder="Hours..."
-                        className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-100 focus:border-indigo-400 bg-white"
-                        value={logHoursInput}
-                        onChange={(e) => setLogHoursInput(e.target.value)}
-                        required
-                      />
-                      <Clock className="w-3.5 h-3.5 text-slate-350 absolute right-2.5 top-2" />
-                    </div>
-                    <button
-                      type="submit"
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold cursor-pointer transition-colors"
-                    >
-                      Log
-                    </button>
-                  </div>
-                </form>
-              )}
             </div>
 
             {/* Admin Delete Action */}

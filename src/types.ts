@@ -6,6 +6,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  password?: string;
   role: UserRole;
   avatarUrl?: string;
   joinedAt: string;
@@ -48,8 +49,6 @@ export interface Task {
   stageId: string; // references WorkflowStage.id
   priority: 'low' | 'medium' | 'high' | 'critical';
   assignedTo?: string; // references User.id
-  estimatedHours: number;
-  loggedHours: number;
   dueDate: string;
   createdAt: string;
   updatedAt: string;
@@ -82,14 +81,27 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface TeamActivity {
+  id: string;
+  type: 'task_completion' | 'project_update' | 'system_alert' | 'comment_added' | 'task_created' | 'task_moved' | 'message_sent';
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  title: string;
+  description?: string;
+  projectId?: string;
+  projectName?: string;
+  taskId?: string;
+  taskTitle?: string;
+  createdAt: string;
+}
+
 export interface ProjectReport {
   projectId: string;
   projectName: string;
   totalTasks: number;
   tasksByStage: Record<string, number>;
   tasksByType: Record<TaskType, number>;
-  totalEstimatedHours: number;
-  totalLoggedHours: number;
   overdueTasksCount: number;
 }
 
@@ -105,14 +117,13 @@ export interface VisualSettings {
   showArchiveTab: boolean;
   showTaskPriorityBadge: boolean;
   showOverdueHighlight: boolean;
-  showHoursCounter: boolean;
   showTaskTypeIcon: boolean;
+  enlargeIconSize?: boolean;
   welcomeModalEnabled?: boolean;
   welcomeModalTitle?: string;
   welcomeModalContent?: string;
   welcomeModalButtonText?: string;
   activeMethodology?: string;
-  theme?: 'light' | 'dark';
   workspaceName?: string;
   primaryColor?: 'indigo' | 'emerald' | 'amber' | 'rose' | 'violet' | 'cyan';
   cardCompactness?: 'compact' | 'comfortable' | 'spacious';
@@ -122,6 +133,16 @@ export interface VisualSettings {
   agileTargetCapacity?: number;
   agileRequireStoryPoints?: boolean;
   agileEnforceSprintAssignment?: boolean;
+  masterPassword?: string;
+}
+
+export interface Message {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  text: string;
+  createdAt: string;
+  read: boolean;
 }
 
 export interface ReportTemplateSettings {
@@ -139,9 +160,16 @@ export interface TaskTemplate {
   id: string;
   name: string;
   description: string;
-  defaultDurationHours: number;
   type: TaskType;
   priority: 'low' | 'medium' | 'high' | 'critical';
   labelIds: string[];
+}
+
+export interface TeamConversation {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  createdBy: string;
 }
 

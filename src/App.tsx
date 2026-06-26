@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Project, Task, User, WorkflowStage, Comment, Notification, UserRole, TaskType, Label, FlowPermissions, VisualSettings, ReportTemplateSettings, TaskTemplate } from './types';
+import { Project, Task, User, WorkflowStage, Comment, Notification, TeamActivity, Message, UserRole, TaskType, Label, FlowPermissions, VisualSettings, ReportTemplateSettings, TeamConversation } from './types';
 import { 
   INITIAL_PROJECTS, 
   INITIAL_USERS, 
@@ -8,7 +8,7 @@ import {
   INITIAL_COMMENTS, 
   INITIAL_NOTIFICATIONS,
   INITIAL_LABELS,
-  INITIAL_TASK_TEMPLATES
+  INITIAL_ACTIVITIES
 } from './data/mockData';
 import { KanbanBoard } from './components/KanbanBoard';
 import { TaskDetailsModal } from './components/TaskDetailsModal';
@@ -21,11 +21,15 @@ import { TeamLoginPortal } from './components/TeamLoginPortal';
 import { CommandPalette } from './components/CommandPalette';
 import { ResourceLoadPanel } from './components/ResourceLoadPanel';
 import { MyOverviewPanel } from './components/MyOverviewPanel';
-import { Breadcrumbs } from './components/Breadcrumbs';
+import { MessagingPortal } from './components/MessagingPortal';
+import { TeamActivityFeed } from './components/TeamActivityFeed';
+import { ExportPanel } from './components/ExportPanel';
 import { printReportHTML } from './utils/reports';
+import { Tooltip } from './components/Tooltip';
 import { 
   LayoutDashboard, 
   BarChart3, 
+  MessageSquare,
   Settings, 
   Users, 
   Bell, 
@@ -43,13 +47,17 @@ import {
   LogIn,
   Shield,
   Clock,
+  Download,
   ArrowRight,
   Search,
   Command,
   Eye,
   EyeOff,
   Calendar,
-  Archive
+  Archive,
+  Key,
+  AlertCircle,
+  Undo
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -59,79 +67,99 @@ export default function App() {
     const mapping = {
       indigo: {
         text: 'text-indigo-600',
-        textSoft: 'text-indigo-700 dark:text-indigo-400',
-        bg: 'bg-indigo-600 dark:bg-indigo-500',
-        bgHover: 'hover:bg-indigo-700 dark:hover:bg-indigo-600',
-        bgSoft: 'bg-indigo-50 dark:bg-indigo-950/40',
-        bgSoftHover: 'hover:bg-indigo-100/80 dark:hover:bg-indigo-900/40',
-        borderSoft: 'border-indigo-100 dark:border-indigo-900/30',
-        ring: 'focus:ring-indigo-100 dark:focus:ring-indigo-950/40',
-        borderFocus: 'focus:border-indigo-500 dark:focus:border-indigo-400',
-        accentText: 'text-indigo-600 dark:text-indigo-400'
+        textSoft: 'text-indigo-700',
+        bg: 'bg-indigo-600',
+        bgHover: 'hover:bg-indigo-700',
+        bgSoft: 'bg-indigo-50',
+        bgSoftHover: 'hover:bg-indigo-100/80',
+        borderSoft: 'border-indigo-100',
+        ring: 'focus:ring-indigo-100',
+        borderFocus: 'focus:border-indigo-500',
+        accentText: 'text-indigo-600'
       },
       emerald: {
         text: 'text-emerald-600',
-        textSoft: 'text-emerald-700 dark:text-emerald-400',
-        bg: 'bg-emerald-600 dark:bg-emerald-500',
-        bgHover: 'hover:bg-emerald-700 dark:hover:bg-emerald-600',
-        bgSoft: 'bg-emerald-50 dark:bg-emerald-950/40',
-        bgSoftHover: 'hover:bg-emerald-100/80 dark:hover:bg-emerald-900/40',
-        borderSoft: 'border-emerald-100 dark:border-emerald-900/30',
-        ring: 'focus:ring-emerald-100 dark:focus:ring-emerald-950/40',
-        borderFocus: 'focus:border-emerald-500 dark:focus:border-emerald-400',
-        accentText: 'text-emerald-600 dark:text-emerald-400'
+        textSoft: 'text-emerald-700',
+        bg: 'bg-emerald-600',
+        bgHover: 'hover:bg-emerald-700',
+        bgSoft: 'bg-emerald-50',
+        bgSoftHover: 'hover:bg-emerald-100/80',
+        borderSoft: 'border-emerald-100',
+        ring: 'focus:ring-emerald-100',
+        borderFocus: 'focus:border-emerald-500',
+        accentText: 'text-emerald-600'
       },
       amber: {
         text: 'text-amber-600',
-        textSoft: 'text-amber-700 dark:text-amber-400',
-        bg: 'bg-amber-600 dark:bg-amber-500',
-        bgHover: 'hover:bg-amber-700 dark:hover:bg-amber-600',
-        bgSoft: 'bg-amber-50 dark:bg-amber-950/40',
-        bgSoftHover: 'hover:bg-amber-100/80 dark:hover:bg-amber-900/40',
-        borderSoft: 'border-amber-100 dark:border-amber-900/30',
-        ring: 'focus:ring-amber-100 dark:focus:ring-amber-950/40',
-        borderFocus: 'focus:border-amber-500 dark:focus:border-amber-400',
-        accentText: 'text-amber-600 dark:text-amber-400'
+        textSoft: 'text-amber-700',
+        bg: 'bg-amber-600',
+        bgHover: 'hover:bg-amber-700',
+        bgSoft: 'bg-amber-50',
+        bgSoftHover: 'hover:bg-amber-100/80',
+        borderSoft: 'border-amber-100',
+        ring: 'focus:ring-amber-100',
+        borderFocus: 'focus:border-amber-500',
+        accentText: 'text-amber-600'
       },
       rose: {
         text: 'text-rose-600',
-        textSoft: 'text-rose-700 dark:text-rose-400',
-        bg: 'bg-rose-600 dark:bg-rose-500',
-        bgHover: 'hover:bg-rose-700 dark:hover:bg-rose-600',
-        bgSoft: 'bg-rose-50 dark:bg-rose-950/40',
-        bgSoftHover: 'hover:bg-rose-100/80 dark:hover:bg-rose-900/40',
-        borderSoft: 'border-rose-100 dark:border-rose-900/30',
-        ring: 'focus:ring-rose-100 dark:focus:ring-rose-950/40',
-        borderFocus: 'focus:border-rose-500 dark:focus:border-rose-400',
-        accentText: 'text-rose-600 dark:text-rose-400'
+        textSoft: 'text-rose-700',
+        bg: 'bg-rose-600',
+        bgHover: 'hover:bg-rose-700',
+        bgSoft: 'bg-rose-50',
+        bgSoftHover: 'hover:bg-rose-100/80',
+        borderSoft: 'border-rose-100',
+        ring: 'focus:ring-rose-100',
+        borderFocus: 'focus:border-rose-500',
+        accentText: 'text-rose-600'
       },
       violet: {
         text: 'text-violet-600',
-        textSoft: 'text-violet-700 dark:text-violet-400',
-        bg: 'bg-violet-600 dark:bg-violet-500',
-        bgHover: 'hover:bg-violet-700 dark:hover:bg-violet-600',
-        bgSoft: 'bg-violet-50 dark:bg-violet-950/40',
-        bgSoftHover: 'hover:bg-violet-100/80 dark:hover:bg-violet-900/40',
-        borderSoft: 'border-violet-100 dark:border-violet-900/30',
-        ring: 'focus:ring-violet-100 dark:focus:ring-violet-950/40',
-        borderFocus: 'focus:border-violet-500 dark:focus:border-violet-400',
-        accentText: 'text-violet-600 dark:text-violet-400'
+        textSoft: 'text-violet-700',
+        bg: 'bg-violet-600',
+        bgHover: 'hover:bg-violet-700',
+        bgSoft: 'bg-violet-50',
+        bgSoftHover: 'hover:bg-violet-100/80',
+        borderSoft: 'border-violet-100',
+        ring: 'focus:ring-violet-100',
+        borderFocus: 'focus:border-violet-500',
+        accentText: 'text-violet-600'
       },
       cyan: {
         text: 'text-cyan-600',
-        textSoft: 'text-cyan-700 dark:text-cyan-400',
-        bg: 'bg-cyan-600 dark:bg-cyan-500',
-        bgHover: 'hover:bg-cyan-700 dark:hover:bg-cyan-600',
-        bgSoft: 'bg-cyan-50 dark:bg-cyan-950/40',
-        bgSoftHover: 'hover:bg-cyan-100/80 dark:hover:bg-cyan-900/40',
-        borderSoft: 'border-cyan-100 dark:border-cyan-900/30',
-        ring: 'focus:ring-cyan-100 dark:focus:ring-cyan-950/40',
-        borderFocus: 'focus:border-cyan-500 dark:focus:border-cyan-400',
-        accentText: 'text-cyan-600 dark:text-cyan-400'
+        textSoft: 'text-cyan-700',
+        bg: 'bg-cyan-600',
+        bgHover: 'hover:bg-cyan-700',
+        bgSoft: 'bg-cyan-50',
+        bgSoftHover: 'hover:bg-cyan-100/80',
+        borderSoft: 'border-cyan-100',
+        ring: 'focus:ring-cyan-100',
+        borderFocus: 'focus:border-cyan-500',
+        accentText: 'text-cyan-600'
       },
     };
     return mapping[color] || mapping.indigo;
   };
+
+  // --- Active Session User ---
+  const [currentUser, setCurrentUser] = useState<User>(() => {
+    const saved = localStorage.getItem('nexus_current_user_id');
+    let user = INITIAL_USERS[0];
+    if (saved) {
+      const match = INITIAL_USERS.find(u => u.id === saved);
+      if (match) user = match;
+    }
+    if (user.id === 'user-admin') {
+      return { ...user, password: 'pms26@212981' };
+    }
+    return user;
+  });
+
+  const [isLoggedOut, setIsLoggedOut] = useState<boolean>(() => {
+    return localStorage.getItem('nexus_logged_out') === 'true';
+  });
+
+  const [showProfilePopover, setShowProfilePopover] = useState(false);
 
   // brand will be initialized after visualSettings state is defined
 
@@ -143,7 +171,13 @@ export default function App() {
 
   const [users, setUsers] = useState<User[]>(() => {
     const local = localStorage.getItem('kanban_users');
-    return local ? JSON.parse(local) : INITIAL_USERS;
+    const loadedUsers: User[] = local ? JSON.parse(local) : INITIAL_USERS;
+    return loadedUsers.map(u => {
+      if (u.id === 'user-admin') {
+        return { ...u, password: 'pms26@212981' };
+      }
+      return u;
+    });
   });
 
   const [stages, setStages] = useState<WorkflowStage[]>(() => {
@@ -166,15 +200,145 @@ export default function App() {
     return local ? JSON.parse(local) : INITIAL_NOTIFICATIONS;
   });
 
+  const [activities, setActivities] = useState<TeamActivity[]>(() => {
+    const local = localStorage.getItem('kanban_activities');
+    return local ? JSON.parse(local) : INITIAL_ACTIVITIES;
+  });
+
   const [labels, setLabels] = useState<Label[]>(() => {
     const local = localStorage.getItem('kanban_labels');
     return local ? JSON.parse(local) : INITIAL_LABELS;
   });
 
-  const [taskTemplates, setTaskTemplates] = useState<TaskTemplate[]>(() => {
-    const local = localStorage.getItem('kanban_task_templates');
-    return local ? JSON.parse(local) : INITIAL_TASK_TEMPLATES;
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const local = localStorage.getItem('kanban_messages');
+    return local ? JSON.parse(local) : [];
   });
+
+  const [teamConversations, setTeamConversations] = useState<TeamConversation[]>(() => {
+    const local = localStorage.getItem('kanban_channels');
+    if (local) {
+      try {
+        return JSON.parse(local);
+      } catch (e) {
+        // ignore
+      }
+    }
+    return [
+      {
+        id: 'channel-general',
+        name: 'General Chat',
+        description: 'A general channel for company-wide announcements and team conversations.',
+        createdAt: new Date().toISOString(),
+        createdBy: 'system'
+      }
+    ];
+  });
+
+  const handleAddTeamConversation = (name: string, description?: string) => {
+    const newConv: TeamConversation = {
+      id: `channel-${Date.now()}`,
+      name,
+      description,
+      createdAt: new Date().toISOString(),
+      createdBy: currentUser.id
+    };
+    setTeamConversations(prev => [...prev, newConv]);
+    
+    addActivity({
+      type: 'project_update',
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userAvatar: currentUser.avatarUrl,
+      title: `Created team conversation #${name}`,
+      description: description,
+    });
+  };
+
+  const handleSendMessage = (text: string, receiverId: string) => {
+    const newMessage: Message = {
+      id: `msg-${Date.now()}`,
+      senderId: currentUser.id,
+      receiverId,
+      text,
+      createdAt: new Date().toISOString(),
+      read: false
+    };
+    setMessages(prev => [...prev, newMessage]);
+
+    const channel = teamConversations.find(c => c.id === receiverId);
+    if (channel) {
+      addActivity({
+        type: 'message_sent',
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userAvatar: currentUser.avatarUrl,
+        title: `Sent message in #${channel.name}`,
+        description: text,
+      });
+    } else {
+      const receiver = users.find(u => u.id === receiverId);
+      addActivity({
+        type: 'message_sent',
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userAvatar: currentUser.avatarUrl,
+        title: `Sent message to ${receiver?.name || 'User'}`,
+        description: text,
+      });
+    }
+  };
+
+  const handleMarkMessagesRead = (senderId: string) => {
+    setMessages(prev => {
+      const hasUnread = prev.some(m => m.senderId === senderId && m.receiverId === currentUser.id && !m.read);
+      if (!hasUnread) return prev;
+      
+      return prev.map(m => 
+        (m.senderId === senderId && m.receiverId === currentUser.id && !m.read) 
+          ? { ...m, read: true } 
+          : m
+      );
+    });
+  };
+
+  const handleMessageUser = (userId: string) => {
+    setSelectedMessageUserId(userId);
+    setActiveTab('messages');
+  };
+
+  const handleSendBulkMessage = (userIds: string[], text: string) => {
+    const newMessages: Message[] = userIds.map((userId, index) => ({
+      id: `bulk-msg-${Date.now()}-${index}`,
+      senderId: currentUser.id,
+      receiverId: userId,
+      text,
+      createdAt: new Date().toISOString(),
+      read: false
+    }));
+    setMessages(prev => [...prev, ...newMessages]);
+    
+    // Add a notification for the admin confirming the messages were sent
+    const notification: Notification = {
+      id: `notif-${Date.now()}`,
+      userId: currentUser.id,
+      title: 'Bulk Messages Dispatched',
+      message: `Your message has been successfully sent to ${userIds.length} members.`,
+      createdAt: new Date().toISOString(),
+      read: false,
+      type: 'success'
+    };
+    setNotifications(prev => [notification, ...prev]);
+
+    addActivity({
+      type: 'message_sent',
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userAvatar: currentUser.avatarUrl,
+      title: 'Dispatched bulk message',
+      description: `Unified announcement sent to ${userIds.length} members: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`,
+    });
+  };
 
   // --- Visual & Report Custom Template Settings ---
   const [visualSettings, setVisualSettings] = useState<VisualSettings>(() => {
@@ -185,14 +349,13 @@ export default function App() {
       showArchiveTab: true,
       showTaskPriorityBadge: true,
       showOverdueHighlight: true,
-      showHoursCounter: true,
       showTaskTypeIcon: true,
+      enlargeIconSize: false,
       welcomeModalEnabled: true,
       welcomeModalTitle: 'Welcome to AEC Design Kanban Studio!',
       welcomeModalContent: 'We have updated our internal design standard submission procedures. Please ensure all drawings and calculations are logged prior to initiating Peer & Q/C Reviews.',
       welcomeModalButtonText: 'Acknowledge & Proceed',
       activeMethodology: 'waterfall',
-      theme: 'light',
       workspaceName: 'Nexus Design Ops',
       primaryColor: 'indigo',
       cardCompactness: 'comfortable',
@@ -202,10 +365,13 @@ export default function App() {
       agileTargetCapacity: 40,
       agileRequireStoryPoints: false,
       agileEnforceSprintAssignment: false,
+      masterPassword: 'pms26@212981',
     };
     if (saved) {
       try {
-        return { ...defaults, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        parsed.masterPassword = 'pms26@212981';
+        return { ...defaults, ...parsed };
       } catch (e) {
         // ignore
       }
@@ -251,20 +417,55 @@ export default function App() {
     localStorage.setItem('reportTemplateSettings', JSON.stringify(newSettings));
   };
 
-  const handleUpdateTaskTemplates = (newTemplates: TaskTemplate[]) => {
-    setTaskTemplates(newTemplates);
-  };
-
   // --- App View State ---
-  const [activeTab, setActiveTab] = useState<'board' | 'reports' | 'calendar' | 'admin' | 'archive' | 'resource_load' | 'my_overview'>('board');
-  const [showBreadcrumbs, setShowBreadcrumbs] = useState<boolean>(() => {
-    const saved = localStorage.getItem('show_breadcrumbs');
-    return saved !== 'false';
-  });
+  const [activeTab, setActiveTab] = useState<'board' | 'reports' | 'calendar' | 'admin' | 'archive' | 'resource_load' | 'my_overview' | 'messages' | 'team_activity' | 'export'>('board');
+  const [selectedMessageUserId, setSelectedMessageUserId] = useState<string | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [forceOpenAddTask, setForceOpenAddTask] = useState(false);
 
-  // Auto-switch away from tabs that are turned off by the admin
+  const addActivity = (activity: Omit<TeamActivity, 'id' | 'createdAt'>) => {
+    const newActivity: TeamActivity = {
+      ...activity,
+      id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      createdAt: new Date().toISOString()
+    };
+    setActivities(prev => [newActivity, ...prev]);
+  };
+  const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordChangeError, setPasswordChangeError] = useState<string | null>(null);
+
+  const handleUpdatePassword = (userId: string, password: string) => {
+    const updatedUsers = users.map(u => u.id === userId ? { ...u, password } : u);
+    setUsers(updatedUsers);
+    localStorage.setItem('kanban_users', JSON.stringify(updatedUsers));
+
+    // Update currentUser if it's the one changing
+    if (currentUser.id === userId) {
+      setCurrentUser(prev => ({ ...prev, password }));
+    }
+  };
+
+  const handleResetUserPassword = (userId: string) => {
+    const masterPassword = visualSettings.masterPassword || 'admin';
+    handleUpdatePassword(userId, masterPassword);
+    
+    setNotifications([
+      {
+        id: `pw-reset-${Date.now()}`,
+        userId: userId,
+        title: 'Security Reset',
+        message: 'Your account password has been reset to the team master key by an administrator.',
+        type: 'alert',
+        read: false,
+        createdAt: new Date().toISOString()
+      },
+      ...notifications
+    ]);
+  };
+
+  // Auto-switch away from tabs that are turned off by the admin or role-restricted
   useEffect(() => {
     if (activeTab === 'calendar' && !visualSettings.showCalendarTab) {
       setActiveTab('board');
@@ -272,8 +473,10 @@ export default function App() {
       setActiveTab('board');
     } else if (activeTab === 'archive' && !visualSettings.showArchiveTab) {
       setActiveTab('board');
+    } else if (activeTab === 'resource_load' && currentUser.role !== 'admin') {
+      setActiveTab('board');
     }
-  }, [activeTab, visualSettings]);
+  }, [activeTab, visualSettings, currentUser.role]);
 
   // --- Welcome Modal State & Effect ---
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
@@ -297,22 +500,6 @@ export default function App() {
     return INITIAL_PROJECTS[0]?.id || '';
   });
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  
-  // --- Active Session User ---
-  const [currentUser, setCurrentUser] = useState<User>(() => {
-    const saved = localStorage.getItem('nexus_current_user_id');
-    if (saved) {
-      const match = INITIAL_USERS.find(u => u.id === saved);
-      if (match) return match;
-    }
-    return INITIAL_USERS[0]; // defaults to Dana Shkur (Admin)
-  });
-
-  const [isLoggedOut, setIsLoggedOut] = useState<boolean>(() => {
-    return localStorage.getItem('nexus_logged_out') === 'true';
-  });
-
-  const [showProfilePopover, setShowProfilePopover] = useState(false);
 
   // --- Dynamic Permissions and Archiving Flow ---
   const DEFAULT_FLOW_PERMISSIONS: FlowPermissions = {
@@ -346,7 +533,7 @@ export default function App() {
 
   // --- UI Interactive Triggers ---
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
-  const [toasts, setToasts] = useState<{ id: string; text: string; type: 'success' | 'info' | 'alert' }[]>([]);
+  const [toasts, setToasts] = useState<{ id: string; text: string; type: 'success' | 'info' | 'alert'; onUndo?: () => void }[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // --- Sync storage changes ---
@@ -379,12 +566,20 @@ export default function App() {
   }, [notifications]);
 
   useEffect(() => {
+    localStorage.setItem('kanban_activities', JSON.stringify(activities));
+  }, [activities]);
+
+  useEffect(() => {
     localStorage.setItem('kanban_labels', JSON.stringify(labels));
   }, [labels]);
 
   useEffect(() => {
-    localStorage.setItem('kanban_task_templates', JSON.stringify(taskTemplates));
-  }, [taskTemplates]);
+    localStorage.setItem('kanban_messages', JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem('kanban_channels', JSON.stringify(teamConversations));
+  }, [teamConversations]);
 
   // --- Global Keyboard Shortcuts for Power Users ---
   useEffect(() => {
@@ -464,12 +659,12 @@ export default function App() {
   ]);
 
   // --- Helper to trigger lightweight temporary slide toasts ---
-  const triggerToast = (text: string, type: 'success' | 'info' | 'alert' = 'success') => {
+  const triggerToast = (text: string, type: 'success' | 'info' | 'alert' = 'success', onUndo?: () => void) => {
     const id = Date.now().toString() + '-' + Math.floor(Math.random() * 1000000);
-    setToasts(prev => [...prev, { id, text, type }]);
+    setToasts(prev => [...prev, { id, text, type, onUndo }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4500);
+    }, onUndo ? 7500 : 4500);
   };
 
   // --- Task Operations Actions ---
@@ -477,7 +672,6 @@ export default function App() {
     const newTask: Task = {
       ...newTaskData,
       id: `task-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
-      loggedHours: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -511,12 +705,64 @@ export default function App() {
     }
     
     setNotifications(prev => [...newNotifications, ...prev]);
+    
+    addActivity({
+      type: 'task_created',
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userAvatar: currentUser.avatarUrl,
+      title: `Created new task: ${newTask.title}`,
+      description: newTask.description,
+      projectId: newTask.projectId,
+      projectName: proj?.name,
+      taskId: newTask.id,
+      taskTitle: newTask.title
+    });
+
     triggerToast('New task listed in backlog stages.');
   };
 
   const handleUpdateTaskStage = (taskId: string, targetStageId: string, targetTaskId?: string, isAfter?: boolean) => {
+    // Capture previous states for potential undo action
+    const previousTasksState = [...tasks];
+    const previousCommentsState = [...comments];
+    const previousActivitiesState = [...activities];
+    const previousNotificationsState = [...notifications];
+
+    const undoAction = () => {
+      setTasks(previousTasksState);
+      setComments(previousCommentsState);
+      setActivities(previousActivitiesState);
+      setNotifications(previousNotificationsState);
+      triggerToast('Task move reverted successfully.', 'info');
+    };
+
     const targetStage = stages.find(s => s.id === targetStageId);
     
+    // Auto-comment logic for QA/Approved stages
+    const stageNameLower = targetStage?.name.toLowerCase() || '';
+    const isQAOrApproved = stageNameLower.includes('qa') || stageNameLower.includes('approved') || stageNameLower.includes('qc') || stageNameLower.includes('review');
+    const existingTask = tasks.find(t => t.id === taskId);
+    
+    if (isQAOrApproved && existingTask && existingTask.stageId !== targetStageId) {
+      handleAddComment(taskId, `System: Moved to ${targetStage?.name} by ${currentUser.name} on ${new Date().toLocaleString()}`);
+      
+      const project = projects.find(p => p.id === existingTask.projectId);
+      
+      addActivity({
+        type: stageNameLower.includes('approved') ? 'task_completion' : 'task_moved',
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userAvatar: currentUser.avatarUrl,
+        title: stageNameLower.includes('approved') ? `Completed task: ${existingTask.title}` : `Moved task to ${targetStage?.name}`,
+        description: existingTask.description,
+        projectId: existingTask.projectId,
+        projectName: project?.name,
+        taskId: existingTask.id,
+        taskTitle: existingTask.title
+      });
+    }
+
     setTasks(prev => {
       const draggedTask = prev.find(t => t.id === taskId);
       if (!draggedTask) return prev;
@@ -566,15 +812,42 @@ export default function App() {
         createdAt: new Date().toISOString()
       };
       setNotifications(prev => [newNotif, ...prev]);
-      triggerToast(`Moved to ${targetStage?.name || targetStageId}`);
+      triggerToast(`Moved to ${targetStage?.name || targetStageId}`, 'success', undoAction);
     } else {
-      triggerToast('Task sequence reordered');
+      triggerToast('Task sequence reordered', 'success', undoAction);
     }
   };
 
   const handleUpdateTaskDetails = (updatedTask: Task) => {
     setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
     triggerToast('Task details modified successfully.');
+  };
+
+  const handleBulkUpdateTasks = (taskIds: string[], updates: Partial<Task>) => {
+    setTasks(prev => prev.map(t => taskIds.includes(t.id) ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t));
+    
+    // Check for auto-comments in bulk move
+    if (updates.stageId) {
+      const targetStage = stages.find(s => s.id === updates.stageId);
+      const stageNameLower = targetStage?.name.toLowerCase() || '';
+      const isQAOrApproved = stageNameLower.includes('qa') || stageNameLower.includes('approved') || stageNameLower.includes('qc') || stageNameLower.includes('review');
+      
+      if (isQAOrApproved) {
+        taskIds.forEach(id => {
+          const task = tasks.find(t => t.id === id);
+          if (task && task.stageId !== updates.stageId) {
+            handleAddComment(id, `System: Bulk moved to ${targetStage?.name} by ${currentUser.name} on ${new Date().toLocaleString()}`);
+          }
+        });
+      }
+    }
+    
+    triggerToast(`Bulk updated ${taskIds.length} tasks.`);
+  };
+
+  const handleBulkArchiveTasks = (taskIds: string[]) => {
+    setTasks(prev => prev.map(t => taskIds.includes(t.id) ? { ...t, archived: true, updatedAt: new Date().toISOString() } : t));
+    triggerToast(`Archived ${taskIds.length} tasks.`);
   };
 
   const handleUpdateLabels = (updatedLabels: Label[]) => {
@@ -631,8 +904,23 @@ export default function App() {
 
     setComments(prev => [...prev, newComment]);
 
-    // Send target assign alert notification
     const task = tasks.find(t => t.id === taskId);
+    const proj = projects.find(p => p.id === task?.projectId);
+
+    if (task && !text.startsWith('System:')) {
+      addActivity({
+        type: 'comment_added',
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userAvatar: currentUser.avatarUrl,
+        title: `Commented on task: ${task.title}`,
+        description: text,
+        projectId: task.projectId,
+        projectName: proj?.name,
+        taskId: task.id,
+        taskTitle: task.title
+      });
+    }
     if (task && task.assignedTo && task.assignedTo !== currentUser.id) {
       const newNotif: Notification = {
         id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
@@ -673,6 +961,17 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
     setNotifications(prev => [newNotif, ...prev]);
+
+    addActivity({
+      type: 'project_update',
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userAvatar: currentUser.avatarUrl,
+      title: `Launched new project: ${newProj.name}`,
+      description: newProj.description,
+      projectId: newProj.id,
+      projectName: newProj.name
+    });
   };
 
   const handleUpdateUserRole = (userId: string, newRole: UserRole) => {
@@ -725,10 +1024,12 @@ export default function App() {
   };
 
   const handleInviteUser = (newUser: Omit<User, 'id' | 'joinedAt'>) => {
+    const masterPassword = visualSettings.masterPassword || 'admin';
     const createdUser: User = {
       ...newUser,
       id: `user-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
-      joinedAt: new Date().toISOString().split('T')[0]
+      joinedAt: new Date().toISOString().split('T')[0],
+      password: masterPassword
     };
     setUsers(prev => [...prev, createdUser]);
     triggerToast(`${newUser.name} registered in corporate team list.`);
@@ -919,7 +1220,7 @@ export default function App() {
 
   if (isLoggedOut) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans transition-colors">
+      <div className={`min-h-screen bg-slate-50 flex flex-col font-sans transition-colors ${visualSettings.enlargeIconSize ? 'enlarge-icons' : ''}`}>
         {/* Toast Overlay Container */}
         <div className="fixed top-4 right-4 z-50 pointer-events-none space-y-2">
           <AnimatePresence>
@@ -937,18 +1238,31 @@ export default function App() {
               >
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                 <span className="text-xs font-bold font-mono tracking-tight">{toast.text}</span>
+                {toast.onUndo && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toast.onUndo?.();
+                      setToasts(prev => prev.filter(t => t.id !== toast.id));
+                    }}
+                    className="ml-2 px-2.5 py-1 bg-white/10 hover:bg-white/20 active:scale-95 text-white border border-white/25 rounded font-sans font-bold text-[10px] tracking-wide transition-all flex items-center gap-1 cursor-pointer pointer-events-auto"
+                  >
+                    <Undo className="w-3 h-3" />
+                    Undo
+                  </button>
+                )}
               </motion.div>
             ))}
           </AnimatePresence>
         </div>
 
-        <TeamLoginPortal users={users} onLogin={handleLogin} />
+        <TeamLoginPortal users={users} onLogin={handleLogin} visualSettings={visualSettings} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors">
+    <div className={`min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans transition-colors ${visualSettings.enlargeIconSize ? 'enlarge-icons' : ''}`}>
       
       {/* Toast Overlay Container */}
       <div className="fixed top-4 right-4 z-50 pointer-events-none space-y-2">
@@ -967,30 +1281,43 @@ export default function App() {
             >
               <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
               <span className="text-xs font-bold font-mono tracking-tight">{toast.text}</span>
+              {toast.onUndo && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toast.onUndo?.();
+                    setToasts(prev => prev.filter(t => t.id !== toast.id));
+                  }}
+                  className="ml-2 px-2.5 py-1 bg-white/10 hover:bg-white/20 active:scale-95 text-white border border-white/25 rounded font-sans font-bold text-[10px] tracking-wide transition-all flex items-center gap-1 cursor-pointer pointer-events-auto"
+                >
+                  <Undo className="w-3 h-3" />
+                  Undo
+                </button>
+              )}
             </motion.div>
           ))}
         </AnimatePresence>
       </div>
 
       {/* TOP DECK HEADER BAR */}
-      <header className="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between sticky top-0 z-40 transition-colors">
+      <header className="h-14 border-b border-slate-200 bg-white flex items-center justify-between sticky top-0 z-40 transition-colors">
         <div className="px-4 justify-between sm:px-6 w-full flex items-center">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <h1 className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">{visualSettings.workspaceName || 'Nexus Design Ops'}</h1>
+              <h1 className="text-sm font-semibold tracking-tight text-slate-900 truncate max-w-[140px] sm:max-w-none">{visualSettings.workspaceName || 'Nexus Design Ops'}</h1>
             </div>
             
             {/* Desktop Command Palette Trigger */}
             <button
               onClick={() => setIsCommandPaletteOpen(true)}
-              className="hidden md:flex items-center gap-2 px-2.5 py-1 text-[11px] text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 transition-all cursor-pointer w-52 justify-between"
-              title="Open Command Palette (Ctrl+K)"
+              className="hidden md:flex items-center gap-2 px-2.5 py-1 text-[11px] text-slate-400 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-600 transition-all cursor-pointer w-52 justify-between"
+              title="Search (Ctrl+K)"
             >
               <div className="flex items-center gap-1.5">
-                <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-                <span>Search or jump to...</span>
+                <Search className="w-3.5 h-3.5 text-slate-400" />
+                <span>Search...</span>
               </div>
-              <kbd className="px-1.5 py-0.5 text-[8px] font-mono font-bold bg-white dark:bg-slate-900 text-slate-400 border border-slate-200 dark:border-slate-800 rounded select-none shadow-2xs">
+              <kbd className="px-1.5 py-0.5 text-[8px] font-mono font-bold bg-white text-slate-400 border border-slate-200 rounded select-none shadow-2xs">
                 Ctrl+K
               </kbd>
             </button>
@@ -999,29 +1326,32 @@ export default function App() {
           <div className="flex items-center gap-2.5">
             {/* INTERACTIVE PROFILE SWITCHER & PORTAL */}
             <div className="relative">
-              <button
-                onClick={() => setShowProfilePopover(!showProfilePopover)}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-all text-left focus:outline-none cursor-pointer"
-              >
-                {currentUser.avatarUrl ? (
-                  <img 
-                    src={currentUser.avatarUrl} 
-                    alt={currentUser.name} 
-                    className="w-5 h-5 rounded-full object-cover border border-slate-300" 
-                  />
-                ) : (
-                  <div className="w-5 h-5 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-[10px] font-bold">
-                    {currentUser.name[0]}
+              <Tooltip text="Profile Settings">
+                <button
+                  onClick={() => setShowProfilePopover(!showProfilePopover)}
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-all text-left focus:outline-none cursor-pointer"
+                  title="Profile Settings"
+                >
+                  {currentUser.avatarUrl ? (
+                    <img 
+                      src={currentUser.avatarUrl} 
+                      alt={currentUser.name} 
+                      className="w-5 h-5 rounded-full object-cover border border-slate-300" 
+                    />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-[10px] font-bold">
+                      {currentUser.name[0]}
+                    </div>
+                  )}
+                  <div className="hidden sm:flex flex-col">
+                    <span className="text-[10px] font-bold text-slate-700 leading-none">{currentUser.name}</span>
+                    <span className="text-[8px] text-slate-400 uppercase tracking-wider mt-0.5 leading-none font-mono">
+                      {currentUser.role.replace('_', ' ')}
+                    </span>
                   </div>
-                )}
-                <div className="hidden sm:flex flex-col">
-                  <span className="text-[10px] font-bold text-slate-700 leading-none">{currentUser.name}</span>
-                  <span className="text-[8px] text-slate-400 uppercase tracking-wider mt-0.5 leading-none font-mono">
-                    {currentUser.role.replace('_', ' ')}
-                  </span>
-                </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-              </button>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+              </Tooltip>
 
               <AnimatePresence>
                 {showProfilePopover && (
@@ -1072,7 +1402,9 @@ export default function App() {
 
                       {/* Stats Section */}
                       <div className="bg-slate-50 border border-slate-100 p-2.5 rounded-lg text-left">
-                        <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Your Assignments:</span>
+                        <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold block mb-1">
+                          Your Assignments:
+                        </span>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1 text-xs font-semibold text-slate-700">
                             <Clock className="w-3.5 h-3.5 text-slate-400" />
@@ -1083,6 +1415,20 @@ export default function App() {
                       </div>
 
                       <div className="border-t border-slate-100 pt-3 space-y-2.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPasswordChangeModal(true);
+                            setShowProfilePopover(false);
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-left bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg transition-colors cursor-pointer text-xs font-bold"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Key className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Change Password</span>
+                          </span>
+                        </button>
+
                         {/* Export Assigned Tasks Button */}
                         <button
                           type="button"
@@ -1125,7 +1471,7 @@ export default function App() {
                           className="w-full flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-100 transition-colors cursor-pointer text-left"
                         >
                           <LogOut className="w-3.5 h-3.5" />
-                          <span>Switch / Log Out Profile</span>
+                          <span>Logout</span>
                         </button>
                       </div>
                     </motion.div>
@@ -1135,25 +1481,30 @@ export default function App() {
             </div>
 
             {/* Mobile Command Palette Trigger */}
-            <button
-              onClick={() => setIsCommandPaletteOpen(true)}
-              className="md:hidden p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-all cursor-pointer"
-              title="Open Command Palette"
-            >
-              <Search className="w-4 h-4" />
-            </button>
+            <Tooltip text="Search">
+              <button
+                onClick={() => setIsCommandPaletteOpen(true)}
+                className="md:hidden p-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-500 transition-all cursor-pointer"
+                title="Search"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+            </Tooltip>
 
             {/* Notification trigger bell */}
             <div className="relative">
-              <button
-                onClick={() => setShowNotificationCenter(!showNotificationCenter)}
-                className="p-1.5 hover:bg-slate-50 rounded text-slate-400 hover:text-slate-600 transition-colors relative cursor-pointer border border-transparent"
-              >
-                <Bell className="w-4 h-4" />
-                {unreadNotifCount > 0 && (
-                  <span className="absolute top-1 right-1 block w-1.5 h-1.5 rounded-full bg-indigo-600" />
-                )}
-              </button>
+              <Tooltip text="Notifications">
+                <button
+                  onClick={() => setShowNotificationCenter(!showNotificationCenter)}
+                  className="p-1.5 hover:bg-slate-50 rounded text-slate-400 hover:text-slate-600 transition-colors relative cursor-pointer border border-transparent"
+                  title="Notifications"
+                >
+                  <Bell className="w-4 h-4" />
+                  {unreadNotifCount > 0 && (
+                    <span className="absolute top-1 right-1 block w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                  )}
+                </button>
+              </Tooltip>
 
               {showNotificationCenter && (
                 <NotificationCenter
@@ -1172,13 +1523,13 @@ export default function App() {
 
       {/* DASHBOARD UTILITY SUBBAR (Selectors & Primary Tabs) */}
       <section className="bg-slate-50 border-b border-slate-200">
-        <div className="px-4 py-2.5 sm:px-6 mx-auto flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+        <div className="px-4 sm:px-6 py-2 mx-auto flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 w-full max-w-full">
           
           {/* Multi-project dropdown */}
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Project:</span>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest shrink-0">Project:</span>
             <select
-              className="px-2 py-1 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded hover:bg-slate-50 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-100 focus:border-indigo-500 cursor-pointer"
+              className="flex-1 sm:flex-initial px-2 py-1 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded hover:bg-slate-50 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-100 focus:border-indigo-500 cursor-pointer min-w-0"
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
             >
@@ -1191,105 +1542,144 @@ export default function App() {
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setActiveTab('board')}
-              className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'board' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
-              }`}
-              title="Board"
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Board</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('my_overview')}
-              className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'my_overview' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
-              }`}
-              title="My Overview"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">My Overview</span>
-            </button>
-            {visualSettings.showReportsTab && (
+          <div className="flex flex-wrap items-center gap-1 max-w-full pb-0.5 shrink-0 select-none">
+            <Tooltip text="Board">
               <button
-                onClick={() => setActiveTab('reports')}
+                onClick={() => setActiveTab('board')}
                 className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === 'reports' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
+                  activeTab === 'board' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
                 }`}
-                title="Reports"
+                title="Board"
               >
-                <BarChart3 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Reports</span>
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Board</span>
               </button>
+            </Tooltip>
+            <Tooltip text="My Overview">
+              <button
+                onClick={() => setActiveTab('my_overview')}
+                className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  activeTab === 'my_overview' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
+                }`}
+                title="My Overview"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">My Overview</span>
+              </button>
+            </Tooltip>
+            {visualSettings.showReportsTab && (
+              <Tooltip text="Reports">
+                <button
+                  onClick={() => setActiveTab('reports')}
+                  className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === 'reports' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
+                  }`}
+                  title="Reports"
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Reports</span>
+                </button>
+              </Tooltip>
             )}
             {visualSettings.showCalendarTab && (
-              <button
-                onClick={() => setActiveTab('calendar')}
-                className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === 'calendar' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
-                }`}
-                title="Calendar"
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Calendar</span>
-              </button>
+              <Tooltip text="Calendar">
+                <button
+                  onClick={() => setActiveTab('calendar')}
+                  className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === 'calendar' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
+                  }`}
+                  title="Calendar"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Calendar</span>
+                </button>
+              </Tooltip>
             )}
+            <Tooltip text="Export Center">
+              <button
+                onClick={() => setActiveTab('export')}
+                className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  activeTab === 'export' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
+                }`}
+                title="Export Center"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Export</span>
+              </button>
+            </Tooltip>
             {visualSettings.showArchiveTab && (
-              <button
-                onClick={() => setActiveTab('archive')}
-                className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === 'archive' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
-                }`}
-                title="Archive"
-              >
-                <Archive className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Archive</span>
-              </button>
+              <Tooltip text="Archive">
+                <button
+                  onClick={() => setActiveTab('archive')}
+                  className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === 'archive' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
+                  }`}
+                  title="Archive"
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Archive</span>
+                </button>
+              </Tooltip>
             )}
-            <button
-              onClick={() => setActiveTab('resource_load')}
-              className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'resource_load' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
-              }`}
-              title="Resource Load"
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Resource Load</span>
-            </button>
             {currentUser.role === 'admin' && (
-              <button
-                onClick={() => setActiveTab('admin')}
-                className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === 'admin' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
-                }`}
-                title="Settings"
-              >
-                <Settings className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Settings</span>
-              </button>
+              <Tooltip text="Team Activity">
+                <button
+                  onClick={() => setActiveTab('team_activity')}
+                  className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === 'team_activity' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
+                  }`}
+                  title="Team Activity"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Activity</span>
+                </button>
+              </Tooltip>
+            )}
+            {currentUser.role === 'admin' && (
+              <Tooltip text="Resource Load">
+                <button
+                  onClick={() => setActiveTab('resource_load')}
+                  className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === 'resource_load' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
+                  }`}
+                  title="Resource Load"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Resource Load</span>
+                </button>
+              </Tooltip>
+            )}
+            {currentUser.role === 'admin' && (
+              <Tooltip text="Settings">
+                <button
+                  onClick={() => setActiveTab('admin')}
+                  className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === 'admin' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
+                  }`}
+                  title="Settings"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Settings</span>
+                </button>
+              </Tooltip>
             )}
 
-            <span className="w-px h-4 bg-slate-250 mx-1.5 inline-block" />
-            <button
-              onClick={() => setShowBreadcrumbs(prev => {
-                const val = !prev;
-                localStorage.setItem('show_breadcrumbs', String(val));
-                return val;
-              })}
-              className={`px-2.5 py-1 text-xs font-bold rounded transition-all flex items-center gap-1.5 cursor-pointer border ${
-                showBreadcrumbs 
-                  ? 'bg-slate-100 border-slate-200 text-slate-750 hover:bg-slate-200' 
-                  : 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 animate-pulse'
-              }`}
-              title={showBreadcrumbs ? "Hide Navigation Trail (Full Screen Real Estate)" : "Show Navigation Trail"}
-            >
-              {showBreadcrumbs ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-              <span className="hidden md:inline">{showBreadcrumbs ? "Hide Trail" : "Show Trail"}</span>
-            </button>
+            <Tooltip text="Team Chat">
+              <button
+                onClick={() => setActiveTab('messages')}
+                className={`px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center gap-1.5 relative ${
+                  activeTab === 'messages' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
+                }`}
+                title="Team Chat"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Team Chat</span>
+                {messages.some(m => m.receiverId === currentUser.id && !m.read) && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-indigo-600 rounded-full border border-white" />
+                )}
+              </button>
+            </Tooltip>
           </div>
-
         </div>
       </section>
 
@@ -1306,27 +1696,7 @@ export default function App() {
       )}
 
       {/* CORE CONTROLLER STAGE WORKSPACE */}
-      <main className="flex-1 px-1.5 py-3 sm:p-6 mx-auto w-full max-w-full">
-        <AnimatePresence initial={false}>
-          {showBreadcrumbs && (
-            <motion.div
-              initial={{ height: 0, opacity: 0, marginBottom: 0, overflow: 'hidden' }}
-              animate={{ height: 'auto', opacity: 1, marginBottom: 16 }}
-              exit={{ height: 0, opacity: 0, marginBottom: 0, overflow: 'hidden' }}
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-            >
-              <Breadcrumbs
-                projects={visibleProjects}
-                selectedProjectId={selectedProjectId}
-                onSelectProject={setSelectedProjectId}
-                activeTab={activeTab}
-                onSelectTab={setActiveTab}
-                currentUser={currentUser}
-                visualSettings={visualSettings}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+      <main className="flex-1 mx-auto w-full max-w-full px-4 py-4 sm:px-6 sm:py-6">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -1345,12 +1715,13 @@ export default function App() {
                 currentUser={currentUser}
                 labels={labels}
                 visualSettings={visualSettings}
-                taskTemplates={taskTemplates}
                 onAddTask={handleAddTask}
                 onUpdateTaskStage={handleUpdateTaskStage}
                 onSelectTask={(id) => setSelectedTaskId(id)}
                 onArchiveCompletedTasks={handleArchiveCompletedTasks}
                 onUpdateTask={handleUpdateTaskDetails}
+                onBulkUpdateTasks={handleBulkUpdateTasks}
+                onBulkArchiveTasks={handleBulkArchiveTasks}
                 onDeleteTask={handleDeleteTask}
                 onToggleArchiveTask={handleToggleArchiveTask}
                 onDeleteProject={handleDeleteProject}
@@ -1363,12 +1734,6 @@ export default function App() {
                 onResetForceOpenAddTask={() => setForceOpenAddTask(false)}
                 onUpdateStages={handleUpdateStages}
                 onUpdateVisualSettings={handleUpdateVisualSettings}
-                showBreadcrumbs={showBreadcrumbs}
-                onToggleBreadcrumbs={() => setShowBreadcrumbs(prev => {
-                  const val = !prev;
-                  localStorage.setItem('show_breadcrumbs', String(val));
-                  return val;
-                })}
               />
             )}
 
@@ -1423,8 +1788,6 @@ export default function App() {
                 onUpdateVisualSettings={handleUpdateVisualSettings}
                 reportTemplateSettings={reportTemplateSettings}
                 onUpdateReportTemplateSettings={handleUpdateReportTemplateSettings}
-                taskTemplates={taskTemplates}
-                onUpdateTaskTemplates={handleUpdateTaskTemplates}
                 labels={labels}
                 onAddProject={handleAddProject}
                 onUpdateUserRole={handleUpdateUserRole}
@@ -1437,13 +1800,31 @@ export default function App() {
                 onUpdateFlowPermissions={handleUpdateFlowPermissions}
                 onDeleteProject={handleDeleteProject}
                 onToggleArchiveProject={handleToggleArchiveProject}
+                onResetUserPassword={handleResetUserPassword}
+                onMessageUser={handleMessageUser}
+                onSendBulkMessage={handleSendBulkMessage}
                 showArchivedProjects={showArchivedProjects}
                 setShowArchivedProjects={setShowArchivedProjects}
                 tasks={tasks}
+                activities={activities}
               />
             )}
 
-            {activeTab === 'resource_load' && (
+            {activeTab === 'messages' && (
+              <MessagingPortal
+                users={users}
+                currentUser={currentUser}
+                messages={messages}
+                onSendMessage={handleSendMessage}
+                onMarkRead={handleMarkMessagesRead}
+                visualSettings={visualSettings}
+                initialUserId={selectedMessageUserId}
+                teamConversations={teamConversations}
+                onAddTeamConversation={handleAddTeamConversation}
+              />
+            )}
+
+            {activeTab === 'resource_load' && currentUser.role === 'admin' && (
               <ResourceLoadPanel
                 tasks={tasks}
                 users={users}
@@ -1460,6 +1841,22 @@ export default function App() {
                 stages={stages}
                 currentUser={currentUser}
                 onSelectTask={(id) => setSelectedTaskId(id)}
+              />
+            )}
+
+            {activeTab === 'team_activity' && currentUser.role === 'admin' && (
+              <TeamActivityFeed
+                activities={activities}
+                users={users}
+              />
+            )}
+
+            {activeTab === 'export' && (
+              <ExportPanel
+                tasks={tasks}
+                projects={projects}
+                activities={activities}
+                users={users}
               />
             )}
           </motion.div>
@@ -1483,7 +1880,9 @@ export default function App() {
              onDeleteComment={handleDeleteComment}
              onDeleteTask={handleDeleteTask}
              onToggleArchiveTask={handleToggleArchiveTask}
+             onMessageUser={handleMessageUser}
              flowPermissions={flowPermissions}
+             visualSettings={visualSettings}
           />
         )}
       </AnimatePresence>
@@ -1538,6 +1937,106 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Password Change Modal Overlay */}
+      <AnimatePresence>
+        {showPasswordChangeModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-slate-200"
+            >
+              <div className="bg-indigo-600 p-5 text-white flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  <h3 className="text-sm font-bold">Update Account Security</h3>
+                </div>
+                <button onClick={() => setShowPasswordChangeModal(false)} className="hover:bg-white/10 p-1 rounded transition-colors cursor-pointer">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">New Password</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => { setNewPassword(e.target.value); setPasswordChangeError(null); }}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all outline-none"
+                    placeholder="Min 4 characters"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Confirm New Password</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => { setConfirmPassword(e.target.value); setPasswordChangeError(null); }}
+                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all outline-none"
+                    placeholder="Repeat new password"
+                  />
+                </div>
+
+                {passwordChangeError && (
+                  <div className="bg-rose-50 border border-rose-100 p-2 rounded-lg flex items-center gap-2 text-rose-600 text-[10px] font-bold">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {passwordChangeError}
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => setShowPasswordChangeModal(false)}
+                    className="flex-1 px-4 py-2 border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (newPassword.length < 4) {
+                        setPasswordChangeError('Password must be at least 4 characters long.');
+                        return;
+                      }
+                      if (newPassword !== confirmPassword) {
+                        setPasswordChangeError('Passwords do not match.');
+                        return;
+                      }
+                      handleUpdatePassword(currentUser.id, newPassword);
+                      setShowPasswordChangeModal(false);
+                      setNewPassword('');
+                      setConfirmPassword('');
+                      // Add a notification
+                      setNotifications([
+                        {
+                          id: `pw-change-${Date.now()}`,
+                          userId: currentUser.id,
+                          title: 'Security Updated',
+                          message: 'Your personal access password has been changed successfully.',
+                          type: 'success',
+                          read: false,
+                          createdAt: new Date().toISOString()
+                        },
+                        ...notifications
+                      ]);
+                    }}
+                    className="flex-[2] px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-md transition-all cursor-pointer"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* GLOBAL COMMAND PALETTE */}
       <AnimatePresence>
         {isCommandPaletteOpen && (
@@ -1565,16 +2064,18 @@ export default function App() {
       </AnimatePresence>
 
       {/* MINIMAL FOOTER */}
-      <footer className="border-t border-slate-100 py-6 text-center text-xs text-slate-400 mt-12 select-none">
-        <div className="px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-center gap-2">
-          <p>© 2026 Nexus Design Ops. Standard workflow management.</p>
-          <div className="flex gap-3 text-[10px] text-slate-400">
-            <span>{stages.length} Lanes</span>
-            <span>{users.length} Members</span>
-            <span>{tasks.length} Tasks</span>
+      {activeTab === 'board' && (
+        <footer className="border-t border-slate-100 py-6 text-center text-xs text-slate-400 mt-12 select-none">
+          <div className="px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <p>© 2026 Nexus Design Ops. Standard workflow management.</p>
+            <div className="flex gap-3 text-[10px] text-slate-400">
+              <span>{stages.length} Lanes</span>
+              <span>{users.length} Members</span>
+              <span>{tasks.length} Tasks</span>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
 
     </div>
   );

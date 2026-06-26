@@ -6,6 +6,10 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+body {
+  @apply overflow-x-hidden;
+}
+
 /* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
@@ -21,4 +25,22 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Accessibility: Enlarge Icon Sizes */
+.enlarge-icons svg:not(.no-enlarge) {
+  transform: scale(1.25);
+  transform-origin: center;
+  transition: transform 0.15s ease-in-out;
+}
+
 

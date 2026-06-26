@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
-import { User, UserRole, TaskType } from '../types';
+import { User, UserRole, TaskType, VisualSettings } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { Layers, Shield, Search, UserCheck, ArrowRight, Wrench, Sparkles, Building, ChevronRight } from 'lucide-react';
+import { Layers, Shield, Search, UserCheck, ArrowRight, Wrench, Sparkles, Building, ChevronRight, ChevronLeft, Key, AlertCircle, X } from 'lucide-react';
 
 interface TeamLoginPortalProps {
   users: User[];
   onLogin: (user: User) => void;
+  visualSettings: VisualSettings;
 }
 
-export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin }) => {
+export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin, visualSettings }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('all');
+  const [challengingUser, setChallengingUser] = useState<User | null>(null);
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const Chevron = ChevronRight;
 
   const activeUsers = users.filter(u => !u.deactivated);
 
@@ -23,6 +28,21 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
     
     return matchesSearch && matchesRole;
   });
+
+  const handleLoginAttempt = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!challengingUser) return;
+
+    const masterPassword = visualSettings.masterPassword || 'admin';
+    const isCorrect = password === challengingUser.password || password === masterPassword;
+
+    if (isCorrect) {
+      onLogin(challengingUser);
+    } else {
+      setError('Invalid password. Please try again or contact administrator.');
+      setPassword('');
+    }
+  };
 
   const getRoleBadgeStyles = (role: UserRole) => {
     switch (role) {
@@ -112,48 +132,6 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
           </motion.p>
         </div>
 
-        {/* Filters and search box */}
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.15 }}
-          className="w-full bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm mb-6 flex flex-col md:flex-row items-stretch md:items-center gap-4 justify-between"
-        >
-          {/* Search Box */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search team profiles by name, email or discipline..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-200 hover:border-slate-350 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 rounded-xl text-xs font-medium text-slate-800 transition-all focus:outline-none"
-            />
-          </div>
-
-          {/* Role Filter Tabs */}
-          <div className="flex flex-wrap gap-1.5 bg-slate-100/80 p-1 rounded-xl shrink-0">
-            {[
-              { id: 'all', label: 'All Profiles' },
-              { id: 'admin', label: 'Admins' },
-              { id: 'lead_designer', label: 'Leads' },
-              { id: 'engineer', label: 'Engineers' },
-              { id: 'viewer', label: 'Viewers' },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setSelectedRoleFilter(tab.id)}
-                className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
-                  selectedRoleFilter === tab.id
-                    ? 'bg-white text-slate-800 shadow-3xs'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </motion.div>
 
         {/* Team profiles grid */}
         <div className="w-full">
@@ -172,7 +150,11 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ type: 'spring', duration: 0.4, delay: idx * 0.04 }}
                       key={user.id}
-                      onClick={() => onLogin(user)}
+                      onClick={() => {
+                        setChallengingUser(user);
+                        setPassword('');
+                        setError(null);
+                      }}
                       className="group bg-white border border-slate-200 hover:border-indigo-400 rounded-2xl p-5 cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5 flex flex-col justify-between gap-4"
                     >
                       <div className="flex items-start gap-4">
@@ -225,7 +207,7 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
                         </span>
                         <div className="flex items-center gap-1 font-semibold">
                           <span>Sign In</span>
-                          <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                          <Chevron className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                         </div>
                       </div>
                     </motion.div>
@@ -258,6 +240,100 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
             )}
           </AnimatePresence>
         </div>
+
+        {/* Password Challenge Overlay */}
+        <AnimatePresence>
+          {challengingUser && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200"
+              >
+                <div className="bg-indigo-600 p-6 text-white relative">
+                  <button 
+                    onClick={() => setChallengingUser(null)}
+                    className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <div className="flex items-center gap-4">
+                    <div className="shrink-0">
+                      {challengingUser.avatarUrl ? (
+                        <img src={challengingUser.avatarUrl} className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20 shadow-lg" alt="" />
+                      ) : (
+                        <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-xl font-bold border-2 border-white/20">
+                          {challengingUser.name[0]}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold leading-tight">{challengingUser.name}</h3>
+                      <p className="text-white/70 text-xs font-mono">{challengingUser.email}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-8 space-y-6">
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                      <Key className="w-4 h-4 text-indigo-500" />
+                      Identity Verification Required
+                    </h4>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Enter your personal access password or the team master key to authenticate this session.
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleLoginAttempt} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <input
+                        autoFocus
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all outline-none"
+                      />
+                      {error && (
+                        <motion.div 
+                          initial={{ opacity: 0, x: -5 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="flex items-center gap-1.5 text-rose-600 text-[10px] font-bold mt-1"
+                        >
+                          <AlertCircle className="w-3 h-3" />
+                          {error}
+                        </motion.div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setChallengingUser(null)}
+                        className="flex-1 px-4 py-3 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex-[2] px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                      >
+                        Verify Identity <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* Bottom Footer */}

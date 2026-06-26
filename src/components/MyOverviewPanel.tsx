@@ -13,13 +13,9 @@ import {
   ExternalLink,
   ChevronRight,
   TrendingDown,
-  CircleDot,
-  Download,
-  FileText
+  CircleDot
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 interface MyOverviewPanelProps {
   tasks: Task[];
@@ -168,19 +164,19 @@ export function MyOverviewPanel({
     switch (priority.toLowerCase()) {
       case 'high':
         return (
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/20 px-2.5 py-0.5 rounded-full border border-red-200/50">
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200/50">
             High
           </span>
         );
       case 'medium':
         return (
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 px-2.5 py-0.5 rounded-full border border-amber-200/50">
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200/50">
             Medium
           </span>
         );
       case 'low':
         return (
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
             Low
           </span>
         );
@@ -198,7 +194,7 @@ export function MyOverviewPanel({
     if (!dueDateStr) {
       return {
         text: 'No due date',
-        style: 'text-slate-400 dark:text-slate-500',
+        style: 'text-slate-400',
         icon: <Clock className="w-3.5 h-3.5 text-slate-400" />
       };
     }
@@ -207,7 +203,7 @@ export function MyOverviewPanel({
     if (isCompleted) {
       return {
         text: `Due: ${dueDateStr}`,
-        style: 'text-slate-500 dark:text-slate-400 line-through',
+        style: 'text-slate-500 line-through',
         icon: <Clock className="w-3.5 h-3.5 text-slate-400" />
       };
     }
@@ -219,7 +215,7 @@ export function MyOverviewPanel({
     if (dueDate < today) {
       return {
         text: `Overdue (${dueDateStr})`,
-        style: 'text-red-600 dark:text-red-400 font-bold bg-red-50 dark:bg-red-950/20 px-2 py-0.5 rounded border border-red-100 dark:border-red-950/50',
+        style: 'text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded border border-red-100',
         icon: <AlertCircle className="w-3.5 h-3.5 text-red-500 animate-pulse" />
       };
     }
@@ -230,94 +226,28 @@ export function MyOverviewPanel({
     if (diffDays <= 2) {
       return {
         text: `Due in ${diffDays} day${diffDays > 1 ? 's' : ''} (${dueDateStr})`,
-        style: 'text-amber-600 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/20 px-2 py-0.5 rounded border border-amber-100 dark:border-amber-950/50',
+        style: 'text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-100',
         icon: <Clock className="w-3.5 h-3.5 text-amber-500" />
       };
     }
 
     return {
       text: dueDateStr,
-      style: 'text-slate-600 dark:text-slate-300 font-medium',
+      style: 'text-slate-600 font-medium',
       icon: <Calendar className="w-3.5 h-3.5 text-slate-500" />
     };
-  };
-
-  const handleExportCSV = () => {
-    const headers = ['ID/Code', 'Title', 'Project', 'Stage', 'Priority', 'Due Date', 'Type', 'Description'];
-    const rows = filteredAndSortedTasks.map(task => {
-      const project = projects.find(p => p.id === task.projectId)?.name || 'Unknown Project';
-      const stage = stages.find(s => s.id === task.stageId)?.name || task.stageId;
-      const codeStr = task.code ? `#${task.code}` : task.id;
-      return [
-        `"${codeStr}"`,
-        `"${task.title.replace(/"/g, '""')}"`,
-        `"${project.replace(/"/g, '""')}"`,
-        `"${stage.replace(/"/g, '""')}"`,
-        `"${task.priority}"`,
-        `"${task.dueDate || 'No due date'}"`,
-        `"${task.type}"`,
-        `"${(task.description || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`
-      ];
-    });
-
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${currentUser.name.replace(/\s+/g, '_')}_overview_tasks_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleExportPDF = () => {
-    const doc = new jsPDF();
-    const tableColumn = ["Code", "Title", "Project", "Stage", "Priority", "Due Date"];
-    const tableRows = filteredAndSortedTasks.map(task => {
-      const project = projects.find(p => p.id === task.projectId)?.name || 'Unknown Project';
-      const stage = stages.find(s => s.id === task.stageId)?.name || task.stageId;
-      const codeStr = task.code ? `#${task.code}` : task.id;
-      return [
-        codeStr,
-        task.title,
-        project,
-        stage,
-        task.priority,
-        task.dueDate || 'No due date'
-      ];
-    });
-
-    doc.setFontSize(18);
-    doc.text(`${currentUser.name} - My Tasks Overview`, 14, 20);
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
-    doc.text(`Total Filtered Tasks: ${filteredAndSortedTasks.length}`, 14, 34);
-    
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 40,
-      theme: 'grid',
-      headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] },
-      alternateRowStyles: { fillColor: [249, 250, 251] },
-      styles: { fontSize: 8, cellPadding: 3 }
-    });
-    
-    doc.save(`${currentUser.name.replace(/\s+/g, '_')}_overview_tasks_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200">
         <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <Folder className="w-5 h-5 text-indigo-600" />
             My Work Overview
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             Keep track of all your assigned responsibilities across every project. Prioritized and sorted by deadlines.
           </p>
         </div>
@@ -326,52 +256,38 @@ export function MyOverviewPanel({
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all cursor-pointer shadow-3xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all cursor-pointer shadow-3xs"
           >
             <ArrowUpDown className="w-3.5 h-3.5" />
             Sort: {sortOrder === 'asc' ? 'Earliest Deadline' : 'Latest Deadline'}
           </button>
 
-          <button
-            onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all cursor-pointer shadow-3xs"
-            title="Export filtered overview tasks to CSV"
-          >
-            <Download className="w-3.5 h-3.5 text-indigo-600" />
-            Export CSV
-          </button>
-          
-          <button
-            onClick={handleExportPDF}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all cursor-pointer shadow-3xs"
-            title="Export filtered overview tasks to PDF"
-          >
-            <FileText className="w-3.5 h-3.5 text-indigo-600" />
-            Export PDF
-          </button>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-slate-400 italic">
+            Export tools in Center tab
+          </div>
         </div>
       </div>
 
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Total Assigned */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl">
-          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Assigned Tasks</p>
-          <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
+        <div className="bg-white border border-slate-200 p-4 rounded-xl">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Assigned Tasks</p>
+          <h3 className="text-2xl font-bold text-slate-900 mt-1">
             {stats.total}
           </h3>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5">
+          <p className="text-[10px] text-slate-500 mt-1.5">
             Across all authorized projects
           </p>
         </div>
 
         {/* Active Work */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl">
-          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Active Responsibilities</p>
-          <h3 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
+        <div className="bg-white border border-slate-200 p-4 rounded-xl">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Responsibilities</p>
+          <h3 className="text-2xl font-bold text-indigo-600 mt-1">
             {stats.active}
           </h3>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5">
+          <p className="text-[10px] text-slate-500 mt-1.5">
             Tasks in progress/backlog stages
           </p>
         </div>
@@ -379,16 +295,16 @@ export function MyOverviewPanel({
         {/* Overdue Limit */}
         <div className={`p-4 rounded-xl border ${
           stats.overdue > 0 
-            ? 'bg-red-50/50 dark:bg-red-950/10 border-red-200 dark:border-red-900/30' 
-            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+            ? 'bg-red-50/50 border-red-200' 
+            : 'bg-white border-slate-200'
         }`}>
-          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Overdue Actions</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Overdue Actions</p>
           <h3 className={`text-2xl font-bold mt-1 ${
-            stats.overdue > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-white'
+            stats.overdue > 0 ? 'text-red-600' : 'text-slate-900'
           }`}>
             {stats.overdue}
           </h3>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5">
+          <p className="text-[10px] text-slate-500 mt-1.5">
             Deadlines missed
           </p>
         </div>
@@ -396,30 +312,30 @@ export function MyOverviewPanel({
         {/* Due soon */}
         <div className={`p-4 rounded-xl border ${
           stats.dueSoon > 0 
-            ? 'bg-amber-50/50 dark:bg-amber-950/10 border-amber-200 dark:border-amber-900/30' 
-            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+            ? 'bg-amber-50/50 border-amber-200' 
+            : 'bg-white border-slate-200'
         }`}>
-          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Due Soon</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Due Soon</p>
           <h3 className={`text-2xl font-bold mt-1 ${
-            stats.dueSoon > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white'
+            stats.dueSoon > 0 ? 'text-amber-600' : 'text-slate-900'
           }`}>
             {stats.dueSoon}
           </h3>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5">
+          <p className="text-[10px] text-slate-500 mt-1.5">
             Required within next 48h
           </p>
         </div>
       </div>
 
       {/* Filter Options & List Control Panel */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex flex-col md:flex-row gap-3 items-center justify-between shadow-3xs">
+      <div className="bg-white border border-slate-200 p-4 rounded-xl flex flex-col md:flex-row gap-3 items-center justify-between shadow-3xs">
         {/* Search */}
         <div className="relative w-full md:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
             placeholder="Search by task title, description, ID..."
-            className="w-full text-xs pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800 dark:text-slate-200"
+            className="w-full text-xs pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -428,13 +344,13 @@ export function MyOverviewPanel({
         {/* Filters Group */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           {/* Status filter tabs */}
-          <div className="inline-flex rounded-lg shadow-3xs bg-slate-100 dark:bg-slate-800 p-1">
+          <div className="inline-flex rounded-lg shadow-3xs bg-slate-100 p-1">
             <button
               onClick={() => setStatusFilter('active')}
               className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                 statusFilter === 'active'
-                  ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  ? 'bg-white text-slate-800 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               Active
@@ -443,8 +359,8 @@ export function MyOverviewPanel({
               onClick={() => setStatusFilter('completed')}
               className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                 statusFilter === 'completed'
-                  ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  ? 'bg-white text-slate-800 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               Completed
@@ -453,8 +369,8 @@ export function MyOverviewPanel({
               onClick={() => setStatusFilter('all')}
               className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                 statusFilter === 'all'
-                  ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  ? 'bg-white text-slate-800 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               All
@@ -463,7 +379,7 @@ export function MyOverviewPanel({
 
           {/* Project Dropdown */}
           <select
-            className="text-xs px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             value={projectFilter}
             onChange={(e) => setProjectFilter(e.target.value)}
           >
@@ -475,7 +391,7 @@ export function MyOverviewPanel({
 
           {/* Priority Dropdown */}
           <select
-            className="text-xs px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
           >
@@ -488,12 +404,12 @@ export function MyOverviewPanel({
       </div>
 
       {/* Main Unified Task List */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-2xs">
-        <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
-          <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+          <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono">
             Unified Queue ({filteredAndSortedTasks.length} tasks)
           </h3>
-          <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 font-mono px-2 py-0.5 rounded">
+          <span className="text-[10px] bg-indigo-50 text-indigo-700 font-mono px-2 py-0.5 rounded">
             Filtered View
           </span>
         </div>
@@ -504,19 +420,19 @@ export function MyOverviewPanel({
               src="/src/assets/images/empty_tasks_illustration_1782378263853.jpg" 
               alt="No assigned tasks illustration" 
               referrerPolicy="no-referrer"
-              className="w-48 h-48 object-cover rounded-2xl border border-slate-150 dark:border-slate-850 shadow-sm mb-5 animate-fadeIn"
+              className="w-48 h-48 object-cover rounded-2xl border border-slate-150 shadow-sm mb-5 animate-fadeIn"
             />
-            <h4 className="text-sm font-bold text-slate-850 dark:text-slate-200">
+            <h4 className="text-sm font-bold text-slate-850">
               {stats.total === 0 ? "Welcome to Your Overview!" : "No Assigned Tasks Found"}
             </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mt-1.5 leading-relaxed">
+            <p className="text-xs text-slate-500 max-w-md mt-1.5 leading-relaxed">
               {stats.total === 0 
                 ? "You don't have any assigned tasks in your queue right now. Go to the Kanban Board to create new design tasks or assign yourself to existing ones!"
                 : "You are completely caught up under the current filters! Change your project, priority, or search preferences to find other states."}
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="divide-y divide-slate-100">
             {filteredAndSortedTasks.map((task, index) => {
               const project = getProjectInfo(task.projectId);
               const stage = getStageInfo(task.stageId);
@@ -529,37 +445,37 @@ export function MyOverviewPanel({
                   transition={{ delay: Math.min(index * 0.03, 0.4) }}
                   key={task.id}
                   onClick={() => onSelectTask(task.id)}
-                  className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/10 transition-all cursor-pointer group"
+                  className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/50 transition-all cursor-pointer group"
                 >
                   {/* Task details & Project relation */}
                   <div className="space-y-1.5 flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
                       {/* Project Pill */}
                       {project && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded font-mono">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded font-mono">
                           {project.name}
                         </span>
                       )}
                       
                       {/* Task Code */}
                       {task.code && (
-                        <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 font-semibold">
+                        <span className="text-[10px] font-mono text-slate-400 font-semibold">
                           #{task.code}
                         </span>
                       )}
 
                       {/* Discipline / Type Pill */}
-                      <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 font-mono px-1.5 py-0.2 bg-slate-100 dark:bg-slate-800 rounded">
+                      <span className="text-[10px] uppercase font-bold text-slate-500 font-mono px-1.5 py-0.2 bg-slate-100 rounded">
                         {task.type}
                       </span>
                     </div>
 
-                    <h4 className="text-sm font-bold text-slate-850 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    <h4 className="text-sm font-bold text-slate-850 group-hover:text-indigo-600 transition-colors">
                       {task.title}
                     </h4>
 
                     {task.description && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 max-w-2xl">
+                      <p className="text-xs text-slate-500 line-clamp-1 max-w-2xl">
                         {task.description}
                       </p>
                     )}
@@ -574,7 +490,7 @@ export function MyOverviewPanel({
                           className="w-2 h-2 rounded-full" 
                           style={{ backgroundColor: stage.color }}
                         />
-                        <span className="text-[11px] font-medium text-slate-600 dark:text-slate-350">
+                        <span className="text-[11px] font-medium text-slate-600">
                           {stage.name}
                         </span>
                       </div>
@@ -592,7 +508,7 @@ export function MyOverviewPanel({
                     </div>
 
                     {/* Open action chevron */}
-                    <div className="hidden sm:block p-1 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-slate-800 text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-all">
+                    <div className="hidden sm:block p-1 rounded-full group-hover:bg-slate-100 text-slate-400 group-hover:text-indigo-600 transition-all">
                       <ChevronRight className="w-4 h-4" />
                     </div>
                   </div>
