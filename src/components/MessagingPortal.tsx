@@ -12,7 +12,8 @@ import {
   Smile,
   Hash,
   Plus,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 
 interface MessagingPortalProps {
@@ -25,6 +26,8 @@ interface MessagingPortalProps {
   initialUserId?: string | null;
   teamConversations?: TeamConversation[];
   onAddTeamConversation?: (name: string, description?: string) => void;
+  onDeleteMessage?: (messageId: string) => void;
+  onDeleteConversation?: (conversationId: string) => void;
 }
 
 export const MessagingPortal: React.FC<MessagingPortalProps> = ({
@@ -36,7 +39,9 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
   visualSettings,
   initialUserId = null,
   teamConversations = [],
-  onAddTeamConversation
+  onAddTeamConversation,
+  onDeleteMessage,
+  onDeleteConversation
 }) => {
   // Default to general channel if no initial selection is active, or use initialUserId
   const [selectedChatId, setSelectedChatId] = useState<string | null>(initialUserId || 'channel-general');
@@ -207,7 +212,7 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
               </button>
             </div>
             
-            {filteredChannels.length === 0 && searchQuery ? (
+             {filteredChannels.length === 0 && searchQuery ? (
               <p className="text-[11px] italic text-slate-400 px-2 py-1">No channels found</p>
             ) : (
               filteredChannels.map(channel => {
@@ -216,46 +221,69 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                 const isSelected = selectedChatId === channel.id;
 
                 return (
-                  <button
+                  <div
                     key={channel.id}
-                    onClick={() => setSelectedChatId(channel.id)}
-                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all text-left group ${
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all text-left group relative ${
                       isSelected ? 'bg-white shadow-3xs ring-1 ring-slate-150' : 'hover:bg-slate-100/50'
                     }`}
                   >
-                    <div className="shrink-0 w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                      <Hash className="w-4.5 h-4.5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-xs font-bold text-slate-800 truncate">#{channel.name}</span>
-                        {lastMsg && (
-                          <span className="text-[9px] text-slate-455">
-                            {new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        )}
+                    <button
+                      onClick={() => setSelectedChatId(channel.id)}
+                      className="flex-1 flex items-center gap-3 min-w-0 text-left focus:outline-none cursor-pointer"
+                    >
+                      <div className="shrink-0 w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                        <Hash className="w-4.5 h-4.5" />
                       </div>
-                      <div className="flex items-center justify-between">
-                        <p className={`text-[11px] truncate ${unreadCount > 0 ? 'text-indigo-600 font-bold' : 'text-slate-500'}`}>
-                          {lastMsg ? (
-                            <>
-                              <span className="font-semibold text-slate-700">
-                                {users.find(u => u.id === lastMsg.senderId)?.name.split(' ')[0] || 'User'}:
-                              </span>{' '}
-                              {lastMsg.text}
-                            </>
-                          ) : (
-                            <span className="italic text-slate-400">No messages yet</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-xs font-bold text-slate-800 truncate">#{channel.name}</span>
+                          {lastMsg && (
+                            <span className="text-[9px] text-slate-455">
+                              {new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
                           )}
-                        </p>
-                        {unreadCount > 0 && (
-                          <span className="bg-indigo-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center shrink-0">
-                            {unreadCount}
-                          </span>
-                        )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <p className={`text-[11px] truncate ${unreadCount > 0 ? 'text-indigo-600 font-bold' : 'text-slate-500'}`}>
+                            {lastMsg ? (
+                              <>
+                                <span className="font-semibold text-slate-700">
+                                  {users.find(u => u.id === lastMsg.senderId)?.name.split(' ')[0] || 'User'}:
+                                </span>{' '}
+                                {lastMsg.text}
+                              </>
+                            ) : (
+                              <span className="italic text-slate-400">No messages yet</span>
+                            )}
+                          </p>
+                          {unreadCount > 0 && (
+                            <span className="bg-indigo-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center shrink-0">
+                              {unreadCount}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+                    {currentUser.role === 'admin' && channel.id !== 'channel-general' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Are you sure you want to delete #${channel.name} and all of its messages?`)) {
+                            if (onDeleteConversation) {
+                              onDeleteConversation(channel.id);
+                              if (selectedChatId === channel.id) {
+                                setSelectedChatId('channel-general');
+                              }
+                            }
+                          }
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-md hover:bg-rose-50 transition-colors cursor-pointer shrink-0 ml-1 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        title="Delete Channel"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 );
               })
             )}
@@ -276,44 +304,64 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                 const isSelected = selectedChatId === user.id;
 
                 return (
-                  <button
+                  <div
                     key={user.id}
-                    onClick={() => setSelectedChatId(user.id)}
-                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all text-left group ${
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all text-left group relative ${
                       isSelected ? 'bg-white shadow-3xs ring-1 ring-slate-150' : 'hover:bg-slate-100/50'
                     }`}
                   >
-                    <div className="relative shrink-0">
-                      <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
-                        {user.name[0]}
+                    <button
+                      onClick={() => setSelectedChatId(user.id)}
+                      className="flex-1 flex items-center gap-3 min-w-0 text-left focus:outline-none cursor-pointer"
+                    >
+                      <div className="relative shrink-0">
+                        <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                          {user.name[0]}
+                        </div>
+                        <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-white rounded-full ${user.deactivated ? 'bg-slate-300' : 'bg-emerald-500'}`} />
                       </div>
-                      <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-white rounded-full ${user.deactivated ? 'bg-slate-300' : 'bg-emerald-500'}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-xs font-bold text-slate-800 truncate">{user.name}</span>
-                        {lastMsg && (
-                          <span className="text-[9px] text-slate-455">
-                            {new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <p className={`text-[11px] truncate ${unreadCount > 0 ? 'text-indigo-600 font-bold' : 'text-slate-500'}`}>
-                          {lastMsg ? (
-                            lastMsg.senderId === currentUser.id ? `You: ${lastMsg.text}` : lastMsg.text
-                          ) : (
-                            <span className="italic text-slate-400">Start a conversation</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-xs font-bold text-slate-800 truncate">{user.name}</span>
+                          {lastMsg && (
+                            <span className="text-[9px] text-slate-455">
+                              {new Date(lastMsg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
                           )}
-                        </p>
-                        {unreadCount > 0 && (
-                          <span className="bg-indigo-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center shrink-0">
-                            {unreadCount}
-                          </span>
-                        )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <p className={`text-[11px] truncate ${unreadCount > 0 ? 'text-indigo-600 font-bold' : 'text-slate-500'}`}>
+                            {lastMsg ? (
+                              lastMsg.senderId === currentUser.id ? `You: ${lastMsg.text}` : lastMsg.text
+                            ) : (
+                              <span className="italic text-slate-400">Start a conversation</span>
+                            )}
+                          </p>
+                          {unreadCount > 0 && (
+                            <span className="bg-indigo-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center shrink-0">
+                              {unreadCount}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+                    {currentUser.role === 'admin' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Are you sure you want to clear all direct messages with ${user.name}?`)) {
+                            if (onDeleteConversation) {
+                              onDeleteConversation(user.id);
+                            }
+                          }
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-md hover:bg-rose-50 transition-colors cursor-pointer shrink-0 ml-1 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        title="Clear Conversation"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 );
               })
             )}
@@ -386,7 +434,7 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                   const msgSender = users.find(u => u.id === msg.senderId);
 
                   return (
-                    <div key={msg.id} className={`flex items-end gap-2.5 ${isMe ? 'flex-row-reverse' : 'flex-row'} w-full min-w-0`}>
+                    <div key={msg.id} className={`flex items-end gap-2.5 ${isMe ? 'flex-row-reverse' : 'flex-row'} w-full min-w-0 group/msg`}>
                       {!isMe && (
                         <div className="w-8 shrink-0">
                           {showAvatar && (
@@ -420,6 +468,21 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                           )}
                         </div>
                       </div>
+                      {currentUser.role === 'admin' && (
+                        <button
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this message?')) {
+                              if (onDeleteMessage) {
+                                onDeleteMessage(msg.id);
+                              }
+                            }
+                          }}
+                          className="opacity-0 group-hover/msg:opacity-100 p-1 hover:text-rose-600 rounded hover:bg-rose-50 transition-all shrink-0 cursor-pointer self-center mb-1"
+                          title="Delete Message"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   );
                 })

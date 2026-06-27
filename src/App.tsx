@@ -302,6 +302,49 @@ export default function App() {
     });
   };
 
+  const handleDeleteMessage = (messageId: string) => {
+    if (currentUser.role !== 'admin') return;
+    setMessages(prev => prev.filter(m => m.id !== messageId));
+    triggerToast('Message deleted successfully.', 'success');
+  };
+
+  const handleDeleteConversation = (conversationId: string) => {
+    if (currentUser.role !== 'admin') return;
+
+    const isChannel = conversationId.startsWith('channel-');
+    if (isChannel) {
+      if (conversationId === 'channel-general') {
+        triggerToast('Default general conversation cannot be deleted.', 'alert');
+        return;
+      }
+
+      const channelObj = teamConversations.find(c => c.id === conversationId);
+      const channelName = channelObj ? channelObj.name : 'Unknown';
+
+      setTeamConversations(prev => prev.filter(c => c.id !== conversationId));
+      setMessages(prev => prev.filter(m => m.receiverId !== conversationId));
+
+      addActivity({
+        type: 'project_update',
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userAvatar: currentUser.avatarUrl,
+        title: `Deleted team conversation #${channelName}`,
+        description: `Deleted channel and all associated messages.`,
+      });
+
+      triggerToast(`Conversation #${channelName} deleted.`, 'success');
+    } else {
+      setMessages(prev => prev.filter(m => 
+        !(m.senderId === currentUser.id && m.receiverId === conversationId) &&
+        !(m.senderId === conversationId && m.receiverId === currentUser.id)
+      ));
+
+      const otherUser = users.find(u => u.id === conversationId);
+      triggerToast(`Direct messages with ${otherUser?.name || 'User'} cleared.`, 'success');
+    }
+  };
+
   const handleMessageUser = (userId: string) => {
     setSelectedMessageUserId(userId);
     setActiveTab('messages');
@@ -1841,6 +1884,8 @@ export default function App() {
                 initialUserId={selectedMessageUserId}
                 teamConversations={teamConversations}
                 onAddTeamConversation={handleAddTeamConversation}
+                onDeleteMessage={handleDeleteMessage}
+                onDeleteConversation={handleDeleteConversation}
               />
             )}
 
