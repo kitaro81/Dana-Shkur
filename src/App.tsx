@@ -538,6 +538,8 @@ export default function App() {
       setActiveTab('board');
     } else if (activeTab === 'resource_load' && currentUser.role !== 'admin') {
       setActiveTab('board');
+    } else if (activeTab === 'google_sheets' && currentUser.role !== 'admin') {
+      setActiveTab('board');
     }
   }, [activeTab, visualSettings, currentUser.role]);
 
@@ -1808,15 +1810,17 @@ export default function App() {
               )}
             </button>
 
-            <button
-              onClick={() => setActiveTab('google_sheets')}
-              className={`group px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center justify-center sm:justify-start gap-1.5 ${
-                activeTab === 'google_sheets' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
-              }`}
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="hidden sm:inline group-hover:inline group-focus:inline group-active:inline whitespace-nowrap">Cloud Sync</span>
-            </button>
+            {currentUser.role === 'admin' && (
+              <button
+                onClick={() => setActiveTab('google_sheets')}
+                className={`group px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center justify-center sm:justify-start gap-1.5 ${
+                  activeTab === 'google_sheets' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
+                }`}
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="hidden sm:inline group-hover:inline group-focus:inline group-active:inline whitespace-nowrap">Cloud Sync</span>
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -2003,7 +2007,7 @@ export default function App() {
               />
             )}
 
-            {activeTab === 'google_sheets' && (
+            {activeTab === 'google_sheets' && currentUser.role === 'admin' && (
               <GoogleSheetsSyncPanel
                 localData={{
                   projects,
