@@ -17,6 +17,7 @@ interface AdminDashboardProps {
   onUpdateProject?: (project: Project) => void;
   onUpdateUserRole: (userId: string, newRole: UserRole) => void;
   onUpdateUserDiscipline: (userId: string, newDiscipline: TaskType) => void;
+  onUpdateUser?: (updatedUser: User) => void;
   onDeleteUser?: (userId: string) => void;
   onToggleDeactivateUser?: (userId: string) => void;
   onInviteUser: (user: Omit<User, 'id' | 'joinedAt'>) => void;
@@ -43,6 +44,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onUpdateProject,
   onUpdateUserRole,
   onUpdateUserDiscipline,
+  onUpdateUser,
   onDeleteUser,
   onToggleDeactivateUser,
   onInviteUser,
@@ -159,6 +161,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     setEditingProject(null);
     alert('Project details and team assignments updated successfully.');
+  };
+  
+  // --- User editing state ---
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editUserName, setEditUserName] = useState('');
+  const [editUserEmail, setEditUserEmail] = useState('');
+  const [editUserPhone, setEditUserPhone] = useState('');
+  const [editUserRole, setEditUserRole] = useState<UserRole>('engineer');
+  const [editUserDiscipline, setEditUserDiscipline] = useState<TaskType>('other');
+  const [editUserAvatar, setEditUserAvatar] = useState('');
+
+  const handleStartEditUser = (u: User) => {
+    setEditingUser(u);
+    setEditUserName(u.name);
+    setEditUserEmail(u.email);
+    setEditUserPhone(u.phoneNumber || '');
+    setEditUserRole(u.role);
+    setEditUserDiscipline(u.discipline || 'other');
+    setEditUserAvatar(u.avatarUrl || '');
+  };
+
+  const handleSaveEditUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    if (!editUserName.trim() || !editUserEmail.trim()) return;
+
+    if (onUpdateUser) {
+      onUpdateUser({
+        ...editingUser,
+        name: editUserName.trim(),
+        email: editUserEmail.trim(),
+        phoneNumber: editUserPhone.trim() || undefined,
+        role: editUserRole,
+        discipline: editUserDiscipline,
+        avatarUrl: editUserAvatar.trim() || undefined,
+      });
+    }
+
+    setEditingUser(null);
   };
   
   // --- Bulk Message State ---
@@ -873,54 +914,65 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
 
                       {/* Member actions */}
-                      {u.id !== currentUser.id && (
-                        <div className="flex items-center gap-1.5 border-l border-slate-200 pl-4">
-                          {onToggleDeactivateUser && (
-                            <button
-                              type="button"
-                              onClick={() => onToggleDeactivateUser(u.id)}
-                              className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded border transition-colors cursor-pointer ${
-                                u.deactivated
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                  : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
-                              }`}
-                              title={u.deactivated ? "Reactivate member account" : "Deactivate member account"}
-                            >
-                              {u.deactivated ? 'Activate' : 'Deactivate'}
-                            </button>
-                          )}
-                          {onMessageUser && (
-                            <button
-                              type="button"
-                              onClick={() => onMessageUser(u.id)}
-                              className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors cursor-pointer border border-transparent hover:border-indigo-100"
-                              title="Send Message"
-                            >
-                              <MessageSquare className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          {onResetUserPassword && (
-                            <button
-                              type="button"
-                              onClick={() => onResetUserPassword(u.id)}
-                              className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors cursor-pointer border border-transparent hover:border-indigo-100"
-                              title="Reset user password to master key"
-                            >
-                              <RefreshCw className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          {onDeleteUser && (
-                            <button
-                              type="button"
-                              onClick={() => onDeleteUser(u.id)}
-                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer border border-transparent hover:border-rose-100"
-                              title="Delete user permanently"
-                            >
-                              <Trash className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      )}
+                      <div className="flex items-center gap-1.5 border-l border-slate-200 pl-4">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditUser(u)}
+                          className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors cursor-pointer border border-transparent hover:border-indigo-100"
+                          title="Edit Member Information"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        {u.id !== currentUser.id && (
+                          <>
+                            {onToggleDeactivateUser && (
+                              <button
+                                type="button"
+                                onClick={() => onToggleDeactivateUser(u.id)}
+                                className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded border transition-colors cursor-pointer ${
+                                  u.deactivated
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                    : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                }`}
+                                title={u.deactivated ? "Reactivate member account" : "Deactivate member account"}
+                              >
+                                {u.deactivated ? 'Activate' : 'Deactivate'}
+                              </button>
+                            )}
+                            {onMessageUser && (
+                              <button
+                                type="button"
+                                onClick={() => onMessageUser(u.id)}
+                                className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors cursor-pointer border border-transparent hover:border-indigo-100"
+                                title="Send Message"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {onResetUserPassword && (
+                              <button
+                                type="button"
+                                onClick={() => onResetUserPassword(u.id)}
+                                className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors cursor-pointer border border-transparent hover:border-indigo-100"
+                                title="Reset user password to master key"
+                              >
+                                <RefreshCw className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {onDeleteUser && (
+                              <button
+                                type="button"
+                                onClick={() => onDeleteUser(u.id)}
+                                className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer border border-transparent hover:border-rose-100"
+                                title="Delete user permanently"
+                              >
+                                <Trash className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1942,6 +1994,141 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-lg shadow-indigo-100 transition-all cursor-pointer uppercase tracking-wider flex items-center gap-2"
                   >
                     Save Project
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Member Modal */}
+      <AnimatePresence>
+        {editingUser && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setEditingUser(null)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200"
+            >
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">Edit Member Information</h3>
+                    <p className="text-[10px] text-slate-500 font-mono tracking-wider">MEMBER ID: {editingUser.id}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEditUser} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-left">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. John Doe"
+                    className="w-full text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
+                    value={editUserName}
+                    onChange={(e) => setEditUserName(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. name@company.com"
+                    className="w-full text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
+                    value={editUserEmail}
+                    onChange={(e) => setEditUserEmail(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. +1 (555) 019-2834"
+                    className="w-full text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
+                    value={editUserPhone}
+                    onChange={(e) => setEditUserPhone(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Avatar Image URL</label>
+                  <input
+                    type="text"
+                    placeholder="https://example.com/avatar.jpg"
+                    className="w-full text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
+                    value={editUserAvatar}
+                    onChange={(e) => setEditUserAvatar(e.target.value)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">System Role</label>
+                    <select
+                      className="w-full text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 cursor-pointer"
+                      value={editUserRole}
+                      onChange={(e) => setEditUserRole(e.target.value as UserRole)}
+                    >
+                      <option value="admin">ADMIN</option>
+                      <option value="lead_designer">LEAD DESIGNER</option>
+                      <option value="engineer">ENGINEER</option>
+                      <option value="viewer">VIEWER</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Discipline</label>
+                    <select
+                      className="w-full text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 cursor-pointer"
+                      value={editUserDiscipline}
+                      onChange={(e) => setEditUserDiscipline(e.target.value as TaskType)}
+                    >
+                      <option value="architecture">ARCHITECTURE</option>
+                      <option value="structure">STRUCTURE</option>
+                      <option value="electric">ELECTRICAL</option>
+                      <option value="mechanical">MECHANICAL</option>
+                      <option value="other">OTHER</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-150">
+                  <button
+                    type="button"
+                    onClick={() => setEditingUser(null)}
+                    className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer uppercase tracking-wider"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-lg shadow-indigo-100 transition-all cursor-pointer uppercase tracking-wider"
+                  >
+                    Save Changes
                   </button>
                 </div>
               </form>

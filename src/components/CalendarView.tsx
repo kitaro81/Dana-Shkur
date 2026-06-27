@@ -78,11 +78,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const [snapToGrid, setSnapToGrid] = useState<boolean>(true);
 
   // Task Markers state
-  const [taskMarkers, setTaskMarkers] = useState<TaskMarker[]>([
-    { id: 'marker-1', date: '2026-06-18', title: 'Schematic Design Review', color: '#EF4444', description: 'Coordinated architecture and structural review checkpoint' },
-    { id: 'marker-2', date: '2026-06-24', title: 'QC Coordination Check', color: '#F59E0B', description: 'Interdisciplinary collision detection & clash verification' },
-    { id: 'marker-3', date: '2026-06-28', title: 'Client Package Release', color: '#10B981', description: 'Milestone issue for final customer construction sign-off' },
-  ]);
+  const [taskMarkers, setTaskMarkers] = useState<TaskMarker[]>([]);
 
   // Marker Form States
   const [showAddMarker, setShowAddMarker] = useState<boolean>(false);
@@ -1142,12 +1138,27 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             <span className="text-[9px] uppercase font-bold tracking-widest text-slate-500 font-mono">
               Active Timeline Milestones ({taskMarkers.length})
             </span>
-            <button
-              onClick={() => setShowAddMarker(true)}
-              className="text-[9px] text-indigo-600 hover:underline font-bold cursor-pointer"
-            >
-              + Add Marker
-            </button>
+            <div className="flex items-center gap-2">
+              {taskMarkers.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (confirm('Are you sure you want to delete all milestone markers?')) {
+                      setTaskMarkers([]);
+                      triggerFeedback('All milestone markers deleted.');
+                    }
+                  }}
+                  className="text-[9px] text-red-600 hover:text-red-700 hover:underline font-bold cursor-pointer"
+                >
+                  Clear All
+                </button>
+              )}
+              <button
+                onClick={() => setShowAddMarker(true)}
+                className="text-[9px] text-indigo-600 hover:underline font-bold cursor-pointer"
+              >
+                + Add Marker
+              </button>
+            </div>
           </div>
           
           <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">

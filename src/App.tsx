@@ -143,6 +143,19 @@ export default function App() {
 
   // --- Active Session User ---
   const [currentUser, setCurrentUser] = useState<User>(() => {
+    if (localStorage.getItem('kanban_empty_reset_v3') !== 'true') {
+      localStorage.removeItem('kanban_projects');
+      localStorage.removeItem('kanban_users');
+      localStorage.removeItem('kanban_tasks');
+      localStorage.removeItem('kanban_comments');
+      localStorage.removeItem('kanban_notifications');
+      localStorage.removeItem('kanban_activities');
+      localStorage.removeItem('kanban_messages');
+      localStorage.removeItem('kanban_channels');
+      localStorage.removeItem('nexus_current_user_id');
+      localStorage.setItem('kanban_empty_reset_v3', 'true');
+    }
+
     const saved = localStorage.getItem('nexus_current_user_id');
     let user = INITIAL_USERS[0];
     if (saved) {
@@ -1123,6 +1136,16 @@ export default function App() {
     triggerToast(`Member discipline updated to ${newDiscipline.toUpperCase()}`, 'info');
   };
 
+  const handleUpdateUser = (updatedUser: User) => {
+    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    
+    // Auto sync current user if session user details changed
+    if (updatedUser.id === currentUser.id) {
+      setCurrentUser(updatedUser);
+    }
+    triggerToast(`Member details for "${updatedUser.name}" updated successfully.`, 'success');
+  };
+
   const handleDeleteUser = (userId: string) => {
     if (userId === currentUser.id) {
       triggerToast('Cannot delete yourself from the system roster!', 'alert');
@@ -1855,6 +1878,7 @@ export default function App() {
                 onUpdateProject={handleUpdateProject}
                 onUpdateUserRole={handleUpdateUserRole}
                 onUpdateUserDiscipline={handleUpdateUserDiscipline}
+                onUpdateUser={handleUpdateUser}
                 onDeleteUser={handleDeleteUser}
                 onToggleDeactivateUser={handleToggleDeactivateUser}
                 onInviteUser={handleInviteUser}
@@ -2129,16 +2153,18 @@ export default function App() {
       </AnimatePresence>
 
       {/* MINIMAL FOOTER */}
-      <footer className="border-t border-slate-100 py-6 text-center text-xs text-slate-400 mt-12 select-none">
-        <div className="px-2 sm:px-6 flex flex-col sm:flex-row justify-between items-center gap-2">
-          <p>{visualSettings.footerText || '© 2026 Nexus Design Ops. Standard workflow management.'}</p>
-          <div className="flex gap-3 text-[10px] text-slate-400">
-            <span>{stages.length} Lanes</span>
-            <span>{users.length} Members</span>
-            <span>{tasks.length} Tasks</span>
+      {activeTab !== 'messages' && (
+        <footer className="border-t border-slate-100 py-6 text-center text-xs text-slate-400 mt-12 select-none">
+          <div className="px-2 sm:px-6 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <p>{visualSettings.footerText || '© 2026 Nexus Design Ops. Standard workflow management.'}</p>
+            <div className="flex gap-3 text-[10px] text-slate-400">
+              <span>{stages.length} Lanes</span>
+              <span>{users.length} Members</span>
+              <span>{tasks.length} Tasks</span>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
 
     </div>
   );
