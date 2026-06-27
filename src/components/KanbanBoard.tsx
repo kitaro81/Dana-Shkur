@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Task, Project, User, WorkflowStage, TaskType, Label, VisualSettings } from '../types';
 import { Plus, Search, Filter, AlertTriangle, ArrowRight, Clock, User as UserIcon, Archive, Link, Check, Table, GripVertical, Compass, Layers, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -175,14 +175,20 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }
 
   // Filter tasks belonging only to the current active project, search title, and selected design discipline 
-  const projectTasks = tasks.filter(t => (project.id === 'all' || t.projectId === project.id) && !t.archived);
-  const filteredTasks = projectTasks.filter(task => {
-    const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          task.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesDiscipline = selectedDiscipline === 'all' || task.type === selectedDiscipline;
-    const matchesLabel = selectedLabelFilterId === 'all' || (task.labelIds && task.labelIds.includes(selectedLabelFilterId));
-    return matchesSearch && matchesDiscipline && matchesLabel;
-  });
+  const projectTasks = useMemo(() => {
+    return tasks.filter(t => (project.id === 'all' || t.projectId === project.id) && !t.archived);
+  }, [tasks, project.id]);
+
+  const filteredTasks = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return projectTasks.filter(task => {
+      const matchesSearch = task.title.toLowerCase().includes(q) || 
+                            task.description.toLowerCase().includes(q);
+      const matchesDiscipline = selectedDiscipline === 'all' || task.type === selectedDiscipline;
+      const matchesLabel = selectedLabelFilterId === 'all' || (task.labelIds && task.labelIds.includes(selectedLabelFilterId));
+      return matchesSearch && matchesDiscipline && matchesLabel;
+    });
+  }, [projectTasks, searchQuery, selectedDiscipline, selectedLabelFilterId]);
 
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const [isDragOverBufferAfter, setIsDragOverBufferAfter] = useState<boolean>(false);

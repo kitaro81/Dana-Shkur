@@ -9,6 +9,7 @@ interface NotificationCenterProps {
   onMarkAsRead: (id: string) => void;
   onClearAll: () => void;
   onClose: () => void;
+  align?: 'left' | 'right';
 }
 
 export const NotificationCenter: React.FC<NotificationCenterProps> = ({
@@ -17,6 +18,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   onMarkAsRead,
   onClearAll,
   onClose,
+  align = 'right',
 }) => {
   // Filters notifications appropriate for either "all" or specific user's email matching
   const userNotifications = notifications.filter(
@@ -26,7 +28,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const unreadCount = userNotifications.filter(n => !n.read).length;
 
   return (
-    <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden z-20">
+    <div className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} mt-2 w-80 sm:w-96 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden z-20`}>
       
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-slate-50 border-b border-slate-100">

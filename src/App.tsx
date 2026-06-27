@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Project, Task, User, WorkflowStage, Comment, Notification, TeamActivity, Message, UserRole, TaskType, Label, FlowPermissions, VisualSettings, ReportTemplateSettings, TeamConversation } from './types';
 import { 
   INITIAL_PROJECTS, 
@@ -10,31 +10,6 @@ import {
   INITIAL_LABELS,
   INITIAL_ACTIVITIES
 } from './data/mockData';
-import { db, handleFirestoreError, OperationType } from './utils/firebase';
-import { collection, onSnapshot, doc } from 'firebase/firestore';
-import {
-  dbSaveUser,
-  dbDeleteUser,
-  dbSaveProject,
-  dbDeleteProject,
-  dbSaveStage,
-  dbSaveTask,
-  dbDeleteTask,
-  dbSaveComment,
-  dbDeleteComment,
-  dbSaveNotification,
-  dbDeleteNotification,
-  dbSaveActivity,
-  dbSaveLabel,
-  dbSaveMessage,
-  dbDeleteMessage,
-  dbSaveConversation,
-  dbDeleteConversation,
-  dbSaveVisualSettings,
-  dbSaveReportTemplateSettings,
-  dbSaveFlowPermissions,
-  dbSeedInitialDataIfNeeded
-} from './utils/firebaseSync';
 import { KanbanBoard } from './components/KanbanBoard';
 import { TaskDetailsModal } from './components/TaskDetailsModal';
 import { ReportsPanel } from './components/ReportsPanel';
@@ -50,6 +25,7 @@ import { MessagingPortal } from './components/MessagingPortal';
 import { TeamActivityFeed } from './components/TeamActivityFeed';
 import { ExportPanel } from './components/ExportPanel';
 import { printReportHTML } from './utils/reports';
+import { GoogleSheetsSyncPanel } from './components/GoogleSheetsSyncPanel';
 import { 
   LayoutDashboard, 
   BarChart3, 
@@ -282,7 +258,6 @@ export default function App() {
       createdBy: currentUser.id
     };
     setTeamConversations(prev => [...prev, newConv]);
-    dbSaveConversation(newConv);
     
     addActivity({
       type: 'project_update',
@@ -304,7 +279,6 @@ export default function App() {
       read: false
     };
     setMessages(prev => [...prev, newMessage]);
-    dbSaveMessage(newMessage);
 
     const channel = teamConversations.find(c => c.id === receiverId);
     if (channel) {
@@ -334,21 +308,17 @@ export default function App() {
       const hasUnread = prev.some(m => m.senderId === senderId && m.receiverId === currentUser.id && !m.read);
       if (!hasUnread) return prev;
       
-      return prev.map(m => {
-        if (m.senderId === senderId && m.receiverId === currentUser.id && !m.read) {
-          const updated = { ...m, read: true };
-          dbSaveMessage(updated);
-          return updated;
-        }
-        return m;
-      });
+      return prev.map(m => 
+        (m.senderId === senderId && m.receiverId === currentUser.id && !m.read) 
+          ? { ...m, read: true } 
+          : m
+      );
     });
   };
 
   const handleDeleteMessage = (messageId: string) => {
     if (currentUser.role !== 'admin') return;
     setMessages(prev => prev.filter(m => m.id !== messageId));
-    dbDeleteMessage(messageId);
     triggerToast('Message deleted successfully.', 'success');
   };
 
@@ -367,7 +337,6 @@ export default function App() {
 
       setTeamConversations(prev => prev.filter(c => c.id !== conversationId));
       setMessages(prev => prev.filter(m => m.receiverId !== conversationId));
-      dbDeleteConversation(conversationId);
 
       addActivity({
         type: 'project_update',
@@ -380,19 +349,10 @@ export default function App() {
 
       triggerToast(`Conversation #${channelName} deleted.`, 'success');
     } else {
-      // For private chats, delete the filtered messages in Firestore
-      setMessages(prev => {
-        const deletedMsgs = prev.filter(m => 
-          (m.senderId === currentUser.id && m.receiverId === conversationId) ||
-          (m.senderId === conversationId && m.receiverId === currentUser.id)
-        );
-        deletedMsgs.forEach(m => dbDeleteMessage(m.id));
-
-        return prev.filter(m => 
-          !(m.senderId === currentUser.id && m.receiverId === conversationId) &&
-          !(m.senderId === conversationId && m.receiverId === currentUser.id)
-        );
-      });
+      setMessages(prev => prev.filter(m => 
+        !(m.senderId === currentUser.id && m.receiverId === conversationId) &&
+        !(m.senderId === conversationId && m.receiverId === currentUser.id)
+      ));
 
       const otherUser = users.find(u => u.id === conversationId);
       triggerToast(`Direct messages with ${otherUser?.name || 'User'} cleared.`, 'success');
@@ -414,7 +374,6 @@ export default function App() {
       read: false
     }));
     setMessages(prev => [...prev, ...newMessages]);
-    newMessages.forEach(m => dbSaveMessage(m));
     
     // Add a notification for the admin confirming the messages were sent
     const notification: Notification = {
@@ -427,7 +386,6 @@ export default function App() {
       type: 'success'
     };
     setNotifications(prev => [notification, ...prev]);
-    dbSaveNotification(notification);
 
     addActivity({
       type: 'message_sent',
@@ -506,7 +464,6 @@ export default function App() {
   const handleUpdateVisualSettings = (newSettings: VisualSettings) => {
     setVisualSettings(newSettings);
     localStorage.setItem('visualSettings', JSON.stringify(newSettings));
-    dbSaveVisualSettings(newSettings);
   };
 
   useEffect(() => {
@@ -517,11 +474,10 @@ export default function App() {
   const handleUpdateReportTemplateSettings = (newSettings: ReportTemplateSettings) => {
     setReportTemplateSettings(newSettings);
     localStorage.setItem('reportTemplateSettings', JSON.stringify(newSettings));
-    dbSaveReportTemplateSettings(newSettings);
   };
 
   // --- App View State ---
-  const [activeTab, setActiveTab] = useState<'board' | 'reports' | 'calendar' | 'admin' | 'archive' | 'resource_load' | 'my_overview' | 'messages' | 'team_activity' | 'export'>('board');
+  const [activeTab, setActiveTab] = useState<'board' | 'reports' | 'calendar' | 'admin' | 'archive' | 'resource_load' | 'my_overview' | 'messages' | 'team_activity' | 'export' | 'google_sheets'>('board');
   const [selectedMessageUserId, setSelectedMessageUserId] = useState<string | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [forceOpenAddTask, setForceOpenAddTask] = useState(false);
@@ -533,7 +489,6 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
     setActivities(prev => [newActivity, ...prev]);
-    dbSaveActivity(newActivity);
   };
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -544,11 +499,6 @@ export default function App() {
     const updatedUsers = users.map(u => u.id === userId ? { ...u, password } : u);
     setUsers(updatedUsers);
     localStorage.setItem('kanban_users', JSON.stringify(updatedUsers));
-
-    const updatedUser = updatedUsers.find(u => u.id === userId);
-    if (updatedUser) {
-      dbSaveUser(updatedUser);
-    }
 
     // Update currentUser if it's the one changing
     if (currentUser.id === userId) {
@@ -564,17 +514,18 @@ export default function App() {
     const userName = targetUser ? targetUser.name : 'User';
     triggerToast(`Password reset for ${userName} to the team master key.`, 'success');
     
-    const newNotif: Notification = {
-      id: `pw-reset-${Date.now()}`,
-      userId: userId,
-      title: 'Security Reset',
-      message: 'Your account password has been reset to the team master key by an administrator.',
-      type: 'alert',
-      read: false,
-      createdAt: new Date().toISOString()
-    };
-    setNotifications(prev => [newNotif, ...prev]);
-    dbSaveNotification(newNotif);
+    setNotifications([
+      {
+        id: `pw-reset-${Date.now()}`,
+        userId: userId,
+        title: 'Security Reset',
+        message: 'Your account password has been reset to the team master key by an administrator.',
+        type: 'alert',
+        read: false,
+        createdAt: new Date().toISOString()
+      },
+      ...notifications
+    ]);
   };
 
   // Auto-switch away from tabs that are turned off by the admin or role-restricted
@@ -647,182 +598,6 @@ export default function App() {
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
   const [toasts, setToasts] = useState<{ id: string; text: string; type: 'success' | 'info' | 'alert'; onUndo?: () => void }[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // --- Firestore Real-Time Subscriptions ---
-  useEffect(() => {
-    let active = true;
-
-    const initAndSubscribe = async () => {
-      // 1. Seed database with defaults if it is completely empty
-      await dbSeedInitialDataIfNeeded();
-
-      if (!active) return;
-
-      // 2. Subscribe to each Firestore collection in real-time
-      const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-        const list: User[] = [];
-        snapshot.forEach(doc => {
-          list.push(doc.data() as User);
-        });
-        if (list.length > 0) {
-          setUsers(list.map(u => {
-            if (u.id === 'user-admin') {
-              return { ...u, password: 'pms26@212981' };
-            }
-            return u;
-          }));
-        }
-      }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'users');
-      });
-
-      const unsubProjects = onSnapshot(collection(db, 'projects'), (snapshot) => {
-        const list: Project[] = [];
-        snapshot.forEach(doc => {
-          list.push(doc.data() as Project);
-        });
-        setProjects(list);
-      }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'projects');
-      });
-
-      const unsubStages = onSnapshot(collection(db, 'stages'), (snapshot) => {
-        const list: WorkflowStage[] = [];
-        snapshot.forEach(doc => {
-          list.push(doc.data() as WorkflowStage);
-        });
-        if (list.length > 0) {
-          setStages(list.sort((a, b) => a.order - b.order));
-        }
-      }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'stages');
-      });
-
-      const unsubTasks = onSnapshot(collection(db, 'tasks'), (snapshot) => {
-        const list: Task[] = [];
-        snapshot.forEach(doc => {
-          list.push(doc.data() as Task);
-        });
-        setTasks(list);
-      }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'tasks');
-      });
-
-      const unsubComments = onSnapshot(collection(db, 'comments'), (snapshot) => {
-        const list: Comment[] = [];
-        snapshot.forEach(doc => {
-          list.push(doc.data() as Comment);
-        });
-        setComments(list);
-      }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'comments');
-      });
-
-      const unsubNotifications = onSnapshot(collection(db, 'notifications'), (snapshot) => {
-        const list: Notification[] = [];
-        snapshot.forEach(doc => {
-          list.push(doc.data() as Notification);
-        });
-        setNotifications(list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-      }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'notifications');
-      });
-
-      const unsubActivities = onSnapshot(collection(db, 'activities'), (snapshot) => {
-        const list: TeamActivity[] = [];
-        snapshot.forEach(doc => {
-          list.push(doc.data() as TeamActivity);
-        });
-        setActivities(list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-      }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'activities');
-      });
-
-      const unsubLabels = onSnapshot(collection(db, 'labels'), (snapshot) => {
-        const list: Label[] = [];
-        snapshot.forEach(doc => {
-          list.push(doc.data() as Label);
-        });
-        if (list.length > 0) {
-          setLabels(list);
-        }
-      }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'labels');
-      });
-
-      const unsubMessages = onSnapshot(collection(db, 'messages'), (snapshot) => {
-        const list: Message[] = [];
-        snapshot.forEach(doc => {
-          list.push(doc.data() as Message);
-        });
-        setMessages(list);
-      }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'messages');
-      });
-
-      const unsubConversations = onSnapshot(collection(db, 'teamConversations'), (snapshot) => {
-        const list: TeamConversation[] = [];
-        snapshot.forEach(doc => {
-          list.push(doc.data() as TeamConversation);
-        });
-        if (list.length > 0) {
-          setTeamConversations(list);
-        }
-      }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'teamConversations');
-      });
-
-      // Single-document settings
-      const unsubVisualSettings = onSnapshot(doc(db, 'visualSettings', 'default'), (snapshot) => {
-        if (snapshot.exists()) {
-          setVisualSettings(snapshot.data() as VisualSettings);
-        }
-      }, (error) => {
-        handleFirestoreError(error, OperationType.GET, 'visualSettings/default');
-      });
-
-      const unsubReportTemplateSettings = onSnapshot(doc(db, 'reportTemplateSettings', 'default'), (snapshot) => {
-        if (snapshot.exists()) {
-          setReportTemplateSettings(snapshot.data() as ReportTemplateSettings);
-        }
-      }, (error) => {
-        handleFirestoreError(error, OperationType.GET, 'reportTemplateSettings/default');
-      });
-
-      const unsubFlowPermissions = onSnapshot(doc(db, 'flowPermissions', 'default'), (snapshot) => {
-        if (snapshot.exists()) {
-          setFlowPermissions(snapshot.data() as FlowPermissions);
-        }
-      }, (error) => {
-        handleFirestoreError(error, OperationType.GET, 'flowPermissions/default');
-      });
-
-      return () => {
-        unsubUsers();
-        unsubProjects();
-        unsubStages();
-        unsubTasks();
-        unsubComments();
-        unsubNotifications();
-        unsubActivities();
-        unsubLabels();
-        unsubMessages();
-        unsubConversations();
-        unsubVisualSettings();
-        unsubReportTemplateSettings();
-        unsubFlowPermissions();
-      };
-    };
-
-    let cleanupPromise = initAndSubscribe();
-
-    return () => {
-      active = false;
-      cleanupPromise.then(cleanup => {
-        if (cleanup) cleanup();
-      });
-    };
-  }, []);
 
   // --- Sync storage changes ---
   useEffect(() => {
@@ -1015,7 +790,6 @@ export default function App() {
     };
     
     setTasks(prev => [newTask, ...prev]);
-    dbSaveTask(newTask);
 
     // Generate broadcast notification
     const proj = projects.find(p => p.id === newTask.projectId);
@@ -1044,7 +818,6 @@ export default function App() {
     }
     
     setNotifications(prev => [...newNotifications, ...prev]);
-    newNotifications.forEach(n => dbSaveNotification(n));
     
     addActivity({
       type: 'task_created',
@@ -1074,12 +847,6 @@ export default function App() {
       setComments(previousCommentsState);
       setActivities(previousActivitiesState);
       setNotifications(previousNotificationsState);
-      
-      const origTask = previousTasksState.find(t => t.id === taskId);
-      if (origTask) {
-        dbSaveTask(origTask);
-      }
-      
       triggerToast('Task move reverted successfully.', 'info');
     };
 
@@ -1119,8 +886,6 @@ export default function App() {
         stageId: targetStageId,
         updatedAt: new Date().toISOString()
       };
-      
-      dbSaveTask(updatedDraggedTask);
 
       if (!targetTaskId) {
         // Appending to the end of the column: find other tasks of the same stage and project
@@ -1160,7 +925,6 @@ export default function App() {
         createdAt: new Date().toISOString()
       };
       setNotifications(prev => [newNotif, ...prev]);
-      dbSaveNotification(newNotif);
       triggerToast(`Moved to ${targetStage?.name || targetStageId}`, 'success', undoAction);
     } else {
       triggerToast('Task sequence reordered', 'success', undoAction);
@@ -1169,19 +933,11 @@ export default function App() {
 
   const handleUpdateTaskDetails = (updatedTask: Task) => {
     setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
-    dbSaveTask(updatedTask);
     triggerToast('Task details modified successfully.');
   };
 
   const handleBulkUpdateTasks = (taskIds: string[], updates: Partial<Task>) => {
-    setTasks(prev => prev.map(t => {
-      if (taskIds.includes(t.id)) {
-        const updated = { ...t, ...updates, updatedAt: new Date().toISOString() };
-        dbSaveTask(updated);
-        return updated;
-      }
-      return t;
-    }));
+    setTasks(prev => prev.map(t => taskIds.includes(t.id) ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t));
     
     // Check for auto-comments in bulk move
     if (updates.stageId) {
@@ -1203,28 +959,18 @@ export default function App() {
   };
 
   const handleBulkArchiveTasks = (taskIds: string[]) => {
-    setTasks(prev => prev.map(t => {
-      if (taskIds.includes(t.id)) {
-        const updated = { ...t, archived: true, updatedAt: new Date().toISOString() };
-        dbSaveTask(updated);
-        return updated;
-      }
-      return t;
-    }));
+    setTasks(prev => prev.map(t => taskIds.includes(t.id) ? { ...t, archived: true, updatedAt: new Date().toISOString() } : t));
     triggerToast(`Archived ${taskIds.length} tasks.`);
   };
 
   const handleUpdateLabels = (updatedLabels: Label[]) => {
     setLabels(updatedLabels);
-    updatedLabels.forEach(l => dbSaveLabel(l));
     // Relational cleanup for deleted labels on all tasks
     setTasks(prev => prev.map(t => {
       if (!t.labelIds) return t;
       const filtered = t.labelIds.filter(id => updatedLabels.some(l => l.id === id));
       if (filtered.length !== t.labelIds.length) {
-        const updated = { ...t, labelIds: filtered, updatedAt: new Date().toISOString() };
-        dbSaveTask(updated);
-        return updated;
+        return { ...t, labelIds: filtered, updatedAt: new Date().toISOString() };
       }
       return t;
     }));
@@ -1241,14 +987,7 @@ export default function App() {
       return;
     }
 
-    setTasks(prev => prev.map(t => {
-      if (completedTaskIds.includes(t.id)) {
-        const updated = { ...t, archived: true, updatedAt: new Date().toISOString() };
-        dbSaveTask(updated);
-        return updated;
-      }
-      return t;
-    }));
+    setTasks(prev => prev.map(t => completedTaskIds.includes(t.id) ? { ...t, archived: true, updatedAt: new Date().toISOString() } : t));
     triggerToast(`Archived ${completedTaskIds.length} completed task(s)`);
 
     // Generate broadcast notification
@@ -1263,7 +1002,6 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
     setNotifications(prev => [newNotif, ...prev]);
-    dbSaveNotification(newNotif);
   };
 
   // --- Comment Logs ---
@@ -1278,7 +1016,6 @@ export default function App() {
     };
 
     setComments(prev => [...prev, newComment]);
-    dbSaveComment(newComment);
 
     const task = tasks.find(t => t.id === taskId);
     const proj = projects.find(p => p.id === task?.projectId);
@@ -1308,14 +1045,12 @@ export default function App() {
         createdAt: new Date().toISOString()
       };
       setNotifications(prev => [newNotif, ...prev]);
-      dbSaveNotification(newNotif);
     }
     triggerToast('Comment posted onto task timeline.');
   };
 
   const handleDeleteComment = (commentId: string) => {
     setComments(prev => prev.filter(c => c.id !== commentId));
-    dbDeleteComment(commentId);
     triggerToast('Comment removed.', 'info');
   };
 
@@ -1328,7 +1063,6 @@ export default function App() {
     };
     setProjects(prev => [...prev, newProj]);
     setSelectedProjectId(newProj.id); // auto switch focusing inside
-    dbSaveProject(newProj);
 
     const newNotif: Notification = {
       id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
@@ -1340,7 +1074,6 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
     setNotifications(prev => [newNotif, ...prev]);
-    dbSaveNotification(newNotif);
 
     addActivity({
       type: 'project_update',
@@ -1356,7 +1089,6 @@ export default function App() {
 
   const handleUpdateProject = (updatedProj: Project) => {
     setProjects(prev => prev.map(p => p.id === updatedProj.id ? updatedProj : p));
-    dbSaveProject(updatedProj);
     
     // Add real-time notification
     const newNotif: Notification = {
@@ -1369,7 +1101,6 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
     setNotifications(prev => [newNotif, ...prev]);
-    dbSaveNotification(newNotif);
 
     // Log Activity
     addActivity({
@@ -1387,14 +1118,7 @@ export default function App() {
   };
 
   const handleUpdateUserRole = (userId: string, newRole: UserRole) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === userId) {
-        const updated = { ...u, role: newRole };
-        dbSaveUser(updated);
-        return updated;
-      }
-      return u;
-    }));
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
     
     // Auto sync current user if session user roles changed
     if (userId === currentUser.id) {
@@ -1404,14 +1128,7 @@ export default function App() {
   };
 
   const handleUpdateUserDiscipline = (userId: string, newDiscipline: TaskType) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === userId) {
-        const updated = { ...u, discipline: newDiscipline };
-        dbSaveUser(updated);
-        return updated;
-      }
-      return u;
-    }));
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, discipline: newDiscipline } : u));
     
     // Auto sync current user if session user discipline changed
     if (userId === currentUser.id) {
@@ -1422,7 +1139,6 @@ export default function App() {
 
   const handleUpdateUser = (updatedUser: User) => {
     setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-    dbSaveUser(updatedUser);
     
     // Auto sync current user if session user details changed
     if (updatedUser.id === currentUser.id) {
@@ -1440,7 +1156,6 @@ export default function App() {
     if (targetUser) {
       if (confirm(`Are you sure you want to permanently delete user "${targetUser.name}"?`)) {
         setUsers(prev => prev.filter(u => u.id !== userId));
-        dbDeleteUser(userId);
         triggerToast(`Permanently deleted "${targetUser.name}" from roster.`, 'info');
       }
     }
@@ -1455,9 +1170,7 @@ export default function App() {
       if (u.id === userId) {
         const nextDeactivated = !u.deactivated;
         triggerToast(`${u.name} has been ${nextDeactivated ? 'DEACTIVATED' : 'REACTIVATED'}`, 'info');
-        const updated = { ...u, deactivated: nextDeactivated };
-        dbSaveUser(updated);
-        return updated;
+        return { ...u, deactivated: nextDeactivated };
       }
       return u;
     }));
@@ -1472,30 +1185,20 @@ export default function App() {
       password: masterPassword
     };
     setUsers(prev => [...prev, createdUser]);
-    dbSaveUser(createdUser);
     triggerToast(`${newUser.name} registered in corporate team list.`);
   };
 
   const handleUpdateStages = (updatedStages: WorkflowStage[]) => {
     setStages(updatedStages);
-    updatedStages.forEach(s => dbSaveStage(s));
     triggerToast('Kanban workflow stages updated successfully.');
   };
 
   // --- Notification Center helpers ---
   const handleMarkNotificationAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => {
-      if (n.id === id) {
-        const updated = { ...n, read: true };
-        dbSaveNotification(updated);
-        return updated;
-      }
-      return n;
-    }));
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
   const handleClearNotifications = () => {
-    notifications.forEach(n => dbDeleteNotification(n.id));
     setNotifications([]);
     triggerToast('Logs history flushed.', 'info');
   };
@@ -1555,35 +1258,38 @@ export default function App() {
   const isTeamMember = currentUser.role !== 'admin' && currentUser.role !== 'viewer';
 
   // Filters projects and tasks visible to team members
-  const visibleTasks = tasks.filter(t => {
-    // Check if task type is in its role's permitted visibility list
-    const allowed = flowPermissions?.visibility[currentUser.role] || [];
-    if (!allowed.includes(t.type)) return false;
-
-    // Filter by archived status
-    if (!showArchivedTasks && t.archived) return false;
-
-    return true;
-  });
-
-  const visibleProjects = projects.filter(p => {
-    // Filter out archived projects by default
-    if (!showArchivedProjects && p.archived) return false;
-
-    // Filter by permitted tasks or show empty project
-    const projectTasks = tasks.filter(t => t.projectId === p.id);
-    if (projectTasks.length === 0) return true;
-
-    return projectTasks.some(t => {
+  const visibleTasks = useMemo(() => {
+    return tasks.filter(t => {
+      // Check if task type is in its role's permitted visibility list
       const allowed = flowPermissions?.visibility[currentUser.role] || [];
-      return allowed.includes(t.type);
+      if (!allowed.includes(t.type)) return false;
+
+      // Filter by archived status
+      if (!showArchivedTasks && t.archived) return false;
+
+      return true;
     });
-  });
+  }, [tasks, flowPermissions, currentUser.role, showArchivedTasks]);
+
+  const visibleProjects = useMemo(() => {
+    return projects.filter(p => {
+      // Filter out archived projects by default
+      if (!showArchivedProjects && p.archived) return false;
+
+      // Filter by permitted tasks or show empty project
+      const projectTasks = tasks.filter(t => t.projectId === p.id);
+      if (projectTasks.length === 0) return true;
+
+      return projectTasks.some(t => {
+        const allowed = flowPermissions?.visibility[currentUser.role] || [];
+        return allowed.includes(t.type);
+      });
+    });
+  }, [projects, showArchivedProjects, tasks, flowPermissions, currentUser.role]);
 
   // --- Dynamic flow updating and delete handlers ---
   const handleUpdateFlowPermissions = (newPermissions: FlowPermissions) => {
     setFlowPermissions(newPermissions);
-    dbSaveFlowPermissions(newPermissions);
     triggerToast('Permission flow settings synchronized.', 'success');
   };
 
@@ -1594,7 +1300,6 @@ export default function App() {
     }
     if (confirm('Are you sure you want to permanently delete this task?')) {
       setTasks(prev => prev.filter(t => t.id !== taskId));
-      dbDeleteTask(taskId);
       triggerToast('Task permanently deleted.', 'info');
       setSelectedTaskId(null);
     }
@@ -1609,9 +1314,7 @@ export default function App() {
       if (t.id === taskId) {
         const nextArchived = !t.archived;
         triggerToast(nextArchived ? 'Task archived successfully.' : 'Task restored to board.', 'success');
-        const updated = { ...t, archived: nextArchived, updatedAt: new Date().toISOString() };
-        dbSaveTask(updated);
-        return updated;
+        return { ...t, archived: nextArchived, updatedAt: new Date().toISOString() };
       }
       return t;
     }));
@@ -1624,12 +1327,7 @@ export default function App() {
     }
     if (confirm('Are you sure you want to permanently delete this project and all its associated tasks?')) {
       setProjects(prev => prev.filter(p => p.id !== projectId));
-      setTasks(prev => {
-        const remaining = prev.filter(t => t.projectId !== projectId);
-        prev.filter(t => t.projectId === projectId).forEach(t => dbDeleteTask(t.id));
-        return remaining;
-      });
-      dbDeleteProject(projectId);
+      setTasks(prev => prev.filter(t => t.projectId !== projectId));
       triggerToast('Project and tasks permanently deleted.', 'info');
     }
   };
@@ -1643,9 +1341,7 @@ export default function App() {
       if (p.id === projectId) {
         const nextArchived = !p.archived;
         triggerToast(nextArchived ? 'Project archived successfully.' : 'Project restored to active list.', 'success');
-        const updated = { ...p, archived: nextArchived };
-        dbSaveProject(updated);
-        return updated;
+        return { ...p, archived: nextArchived };
       }
       return p;
     }));
@@ -1668,28 +1364,38 @@ export default function App() {
     }
   }, [currentUser.id, currentUser.discipline, currentUser.role, projects, tasks, flowPermissions, showArchivedProjects]);
 
-  const enterpriseProject: Project = {
+  const enterpriseProject = useMemo<Project>(() => ({
     id: 'all',
     name: 'All Projects (Enterprise Portfolio)',
     code: 'ENT',
     description: 'Consolidated portfolio view of all active projects.',
     archived: false,
     status: 'active',
-    createdAt: new Date().toISOString(),
-  };
+    createdAt: '2026-06-27T00:00:00.000Z',
+  }), []);
 
-  const activeProject = selectedProjectId === 'all'
-    ? enterpriseProject
-    : (visibleProjects.find(p => p.id === selectedProjectId) || visibleProjects[0] || null);
-  const activeTask = tasks.find(t => t.id === selectedTaskId);
-  const unreadNotifCount = notifications.filter(
-    n => !n.read && (n.userId === 'all' || n.userId === currentUser.email || n.userId === 'user-admin')
-  ).length;
+  const activeProject = useMemo(() => {
+    return selectedProjectId === 'all'
+      ? enterpriseProject
+      : (visibleProjects.find(p => p.id === selectedProjectId) || visibleProjects[0] || null);
+  }, [selectedProjectId, enterpriseProject, visibleProjects]);
 
-  const currentUserAssignedTasks = tasks.filter(t => 
-    t.assignedTo === currentUser.id || 
-    (t.assignedUserIds && t.assignedUserIds.includes(currentUser.id))
-  );
+  const activeTask = useMemo(() => {
+    return tasks.find(t => t.id === selectedTaskId);
+  }, [tasks, selectedTaskId]);
+
+  const unreadNotifCount = useMemo(() => {
+    return notifications.filter(
+      n => !n.read && (n.userId === 'all' || n.userId === currentUser.email || n.userId === 'user-admin')
+    ).length;
+  }, [notifications, currentUser.email]);
+
+  const currentUserAssignedTasks = useMemo(() => {
+    return tasks.filter(t => 
+      t.assignedTo === currentUser.id || 
+      (t.assignedUserIds && t.assignedUserIds.includes(currentUser.id))
+    );
+  }, [tasks, currentUser.id]);
 
   if (isLoggedOut) {
     return (
@@ -1778,6 +1484,31 @@ export default function App() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <h1 className="text-sm font-semibold tracking-tight text-slate-900 truncate max-w-[140px] sm:max-w-none">{visualSettings.workspaceName || 'Nexus Design Ops'}</h1>
+            </div>
+
+            {/* Notification trigger bell */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotificationCenter(!showNotificationCenter)}
+                className="group flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-slate-50 rounded text-slate-400 hover:text-slate-600 transition-colors relative cursor-pointer border border-transparent"
+              >
+                <Bell className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden group-hover:inline group-focus:inline group-active:inline text-xs font-semibold whitespace-nowrap">Notifications</span>
+                {unreadNotifCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 block w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                )}
+              </button>
+
+              {showNotificationCenter && (
+                <NotificationCenter
+                  notifications={notifications}
+                  currentUserEmail={currentUser.email}
+                  onMarkAsRead={handleMarkNotificationAsRead}
+                  onClearAll={handleClearNotifications}
+                  onClose={() => setShowNotificationCenter(false)}
+                  align="left"
+                />
+              )}
             </div>
             
             {/* Desktop Command Palette Trigger Removed */}
@@ -1906,30 +1637,6 @@ export default function App() {
             </div>
 
             {/* Mobile Command Palette Trigger removed per request */}
-
-            {/* Notification trigger bell */}
-            <div className="relative">
-              <button
-                onClick={() => setShowNotificationCenter(!showNotificationCenter)}
-                className="group flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-slate-50 rounded text-slate-400 hover:text-slate-600 transition-colors relative cursor-pointer border border-transparent"
-              >
-                <Bell className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden group-hover:inline group-focus:inline group-active:inline text-xs font-semibold whitespace-nowrap">Notifications</span>
-                {unreadNotifCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 block w-1.5 h-1.5 rounded-full bg-indigo-600" />
-                )}
-              </button>
-
-              {showNotificationCenter && (
-                <NotificationCenter
-                  notifications={notifications}
-                  currentUserEmail={currentUser.email}
-                  onMarkAsRead={handleMarkNotificationAsRead}
-                  onClearAll={handleClearNotifications}
-                  onClose={() => setShowNotificationCenter(false)}
-                />
-              )}
-            </div>
 
           </div>
         </div>
@@ -2071,6 +1778,16 @@ export default function App() {
               {messages.some(m => m.receiverId === currentUser.id && !m.read) && (
                 <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-indigo-600 rounded-full border border-white" />
               )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('google_sheets')}
+              className={`group px-2.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium rounded transition-colors cursor-pointer flex items-center justify-center sm:justify-start gap-1.5 ${
+                activeTab === 'google_sheets' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:text-slate-850'
+              }`}
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="hidden sm:inline group-hover:inline group-focus:inline group-active:inline whitespace-nowrap">Cloud Sync</span>
             </button>
           </div>
         </div>
@@ -2255,6 +1972,36 @@ export default function App() {
                 projects={projects}
                 activities={activities}
                 users={users}
+              />
+            )}
+
+            {activeTab === 'google_sheets' && (
+              <GoogleSheetsSyncPanel
+                localData={{
+                  projects,
+                  tasks,
+                  users,
+                  comments,
+                  activities,
+                  stages,
+                  labels,
+                  messages,
+                  teamConversations
+                }}
+                onSyncLoaded={(newData) => {
+                  if (newData.projects) setProjects(newData.projects);
+                  if (newData.tasks) setTasks(newData.tasks);
+                  if (newData.users) setUsers(newData.users);
+                  if (newData.comments) setComments(newData.comments);
+                  if (newData.activities) setActivities(newData.activities);
+                  if (newData.stages) setStages(newData.stages);
+                  if (newData.labels) setLabels(newData.labels);
+                  if (newData.messages) setMessages(newData.messages);
+                  if (newData.teamConversations) setTeamConversations(newData.teamConversations);
+                }}
+                currentUser={currentUser}
+                triggerToast={triggerToast}
+                brand={brand}
               />
             )}
           </motion.div>
