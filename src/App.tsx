@@ -169,7 +169,7 @@ export default function App() {
   });
 
   const [isLoggedOut, setIsLoggedOut] = useState<boolean>(() => {
-    return localStorage.getItem('nexus_logged_out') === 'true';
+    return localStorage.getItem('nexus_logged_out') !== 'false';
   });
 
   const [showProfilePopover, setShowProfilePopover] = useState(false);
