@@ -61,6 +61,7 @@ export interface Task {
   disciplines?: TaskType[];
   storyPoints?: number;
   tShirtSize?: 'S' | 'M' | 'L' | 'XL';
+  isDeleted?: boolean;
 }
 
 export interface Comment {

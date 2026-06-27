@@ -43,6 +43,13 @@ body {
   transition: transform 0.15s ease-in-out;
 }
 
+/* Prevent charts, patterns, and explicitly bypassed elements from being scaled */
+.enlarge-icons .no-enlarge svg,
+.enlarge-icons .recharts-wrapper svg,
+.enlarge-icons .recharts-responsive-container svg {
+  transform: none !important;
+}
+
 /* Global Compact & Spacious Layout Modes */
 .compact-layout {
   font-size: 0.825rem; /* ~13px */
@@ -133,6 +140,23 @@ body {
 .spacious-layout :is(.text-xs) {
   font-size: 0.8rem !important;
 }
+
+/* Accessibility: Color contrast and font size overrides */
+.text-\[8px\] {
+  font-size: 0.75rem !important; /* Base accessible size of 12px */
+  color: #334155 !important; /* Darker slate-700 for high-contrast contrast compliance */
+}
+
+.text-\[10px\] {
+  font-size: 0.75rem !important; /* Consistent base accessible size of 12px */
+}
+
+.gap-3.text-\[10px\].text-slate-400 span,
+.gap-3.text-\[10px\].text-slate-600 span {
+  font-weight: 500 !important; /* Slightly increased font weight for legibility */
+  color: #334155 !important; /* Darker slate-700 to meet color contrast guidelines */
+}
+
 
 
 

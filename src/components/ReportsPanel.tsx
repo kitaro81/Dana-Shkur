@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Project, Task, User, WorkflowStage, TaskType } from '../types';
-import { FileText, Percent, BarChart2, CheckCircle2, History, AlertTriangle } from 'lucide-react';
 import { filterTasksByTimeframe } from '../utils/reports';
 import { motion } from 'motion/react';
 
@@ -136,47 +135,6 @@ export const ReportsPanel: React.FC<ReportsPanelProps> = ({
         </div>
       </div>
 
-      {/* Main KPI Stats grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        
-        {/* KPI 1: Active Tasks */}
-        <div className="bg-white p-5 border border-slate-200 rounded-xl relative overflow-hidden">
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="block text-[10px] uppercase font-mono font-bold text-slate-400">Tasks Scoped</span>
-              <span className="text-2xl font-black font-mono text-slate-900">{totalTasksCount}</span>
-            </div>
-            <div className="p-2 bg-slate-50 rounded-lg text-slate-500 border border-slate-100">
-              <FileText className="w-5 h-5" />
-            </div>
-          </div>
-          {/* Progress metric */}
-          <div className="mt-4 flex items-center justify-between text-[11px] text-slate-500">
-            <span>Completed Design:</span>
-            <span className="font-bold text-emerald-600">{completedTasksCount} finished</span>
-          </div>
-        </div>
-
-        {/* KPI 4: Overdue Deliveries */}
-        <div className="bg-white p-5 border border-slate-200 rounded-xl">
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="block text-[10px] uppercase font-mono font-bold text-slate-400">Milestone Risks</span>
-              <span className={`text-2xl font-black font-mono ${overdueTasksCount > 0 ? 'text-red-600 animate-pulse' : 'text-slate-950'}`}>
-                {overdueTasksCount} overdue
-              </span>
-            </div>
-            <div className={`p-2 rounded-lg border ${overdueTasksCount > 0 ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-          </div>
-          <p className="text-[11px] text-slate-500 mt-4">
-            {overdueTasksCount > 0 ? 'Immediate team redistribution required' : 'All structural pipelines stable'}
-          </p>
-        </div>
-
-      </div>
-
       {/* Graphical Breakdown Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
@@ -187,11 +145,15 @@ export const ReportsPanel: React.FC<ReportsPanelProps> = ({
           {totalTasksCount === 0 ? (
             <div className="h-48 flex items-center justify-center text-slate-400 text-xs italic">No design tasks scannable for specified filter metrics.</div>
           ) : (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 py-2">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-6 py-2">
               
               {/* Radial Pie Layout */}
-              <div className="relative w-44 h-44 flex items-center justify-center flex-shrink-0">
-                <svg width="170" height="170" viewBox="0 0 170 170" className="transform -rotate-90">
+              <div className="relative w-44 h-44 flex items-center justify-center flex-shrink-0 no-enlarge">
+                <svg 
+                  viewBox="0 0 170 170" 
+                  className="w-full h-full max-w-[170px] max-h-[170px] no-enlarge"
+                  style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }}
+                >
                   {(() => {
                     let accumulatedPercent = 0;
                     return (Object.keys(typeCounts) as TaskType[]).map((type, idx) => {
@@ -215,7 +177,8 @@ export const ReportsPanel: React.FC<ReportsPanelProps> = ({
                           strokeWidth="24"
                           strokeDasharray={strokeDasharray}
                           strokeDashoffset={strokeDashoffset}
-                          className="transition-all duration-300 hover:scale-105 origin-center cursor-pointer"
+                          className="transition-all duration-300 hover:opacity-80 hover:stroke-[27px] cursor-pointer"
+                          style={{ transformOrigin: '85px 85px' }}
                         />
                       );
                     });
@@ -230,7 +193,7 @@ export const ReportsPanel: React.FC<ReportsPanelProps> = ({
               </div>
 
               {/* Legend with direct counters */}
-              <div className="flex-1 space-y-2.5 w-full">
+              <div className="flex-1 space-y-2.5 w-full max-w-md lg:max-w-none">
                 {(Object.keys(typeCounts) as TaskType[]).map(type => {
                   const count = typeCounts[type];
                   return (

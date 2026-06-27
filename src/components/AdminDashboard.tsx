@@ -843,28 +843,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
                       <div className="min-w-0 cursor-pointer" onClick={() => toggleUserSelection(u.id)}>
                         <div className="flex items-center gap-2 font-mono">
-                          <p className={`text-xs font-bold text-slate-800 truncate ${u.deactivated ? 'line-through text-slate-400 font-normal' : ''}`}>{u.name}</p>
+                          <p className={`text-xs font-bold text-slate-800 truncate ${u.deactivated ? 'line-through text-slate-600 font-normal' : ''}`}>{u.name}</p>
                           {u.id === currentUser.id && (
-                            <span className="text-[8px] uppercase tracking-wide bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold px-1.5 py-0.2 rounded-xs">YOU</span>
+                            <span className="text-[9.5px] uppercase tracking-wide bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold px-1.5 py-0.5 rounded-xs">YOU</span>
                           )}
                           {u.deactivated && (
-                            <span className="text-[8px] uppercase tracking-wide bg-rose-100 text-rose-700 border border-rose-200 font-bold px-1.5 py-0.2 rounded-xs">DEACTIVATED</span>
+                            <span className="text-[9.5px] uppercase tracking-wide bg-rose-100 text-rose-700 border border-rose-200 font-bold px-1.5 py-0.5 rounded-xs">DEACTIVATED</span>
                           )}
                         </div>
-                        <p className="text-[10px] font-mono text-slate-400">{u.email}</p>
+                        <p className="text-[10px] font-mono text-slate-600">{u.email}</p>
                         {u.phoneNumber && (
-                          <p className="text-[10px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
-                            <Phone className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                          <p className="text-[10px] text-slate-650 font-mono flex items-center gap-1 mt-0.5">
+                            <Phone className="w-3 h-3 text-slate-500 flex-shrink-0" />
                             <span>{u.phoneNumber}</span>
                           </p>
                         )}
                         {u.discipline && (
-                          <span className={`text-[9.5px] uppercase tracking-wide px-1.5 py-0.2 rounded font-semibold border inline-block mt-1 ${
-                            u.discipline === 'architecture' ? 'bg-red-50 text-red-600 border-red-100' :
-                            u.discipline === 'structure' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                            u.discipline === 'electric' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                            u.discipline === 'mechanical' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                            'bg-slate-50 text-slate-500 border-slate-100'
+                          <span className={`text-[9.5px] uppercase tracking-wide px-1.5 py-0.5 rounded font-semibold border inline-block mt-1 ${
+                            u.discipline === 'architecture' ? 'bg-red-50 text-red-700 border-red-100' :
+                            u.discipline === 'structure' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                            u.discipline === 'electric' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
+                            u.discipline === 'mechanical' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                            'bg-slate-50 text-slate-600 border-slate-100'
                           }`}>
                             {u.discipline}
                           </span>
@@ -1141,17 +1141,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                     <div className="min-w-0 pr-32">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-mono text-xs font-bold text-slate-800 bg-slate-200 px-1.5 py-0.2 rounded-xs">{p.code}</span>
+                        <span className="font-mono text-xs font-bold text-slate-800 bg-slate-200 px-1.5 py-0.5 rounded-xs">{p.code}</span>
                         <h4 className="text-xs font-extrabold text-slate-900 truncate">{p.name}</h4>
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-0.5 font-mono">Location: {p.location || 'N/A'} | Provisioned {p.createdAt}</p>
+                      <p className="text-[10px] text-slate-600 mt-0.5 font-mono">Location: {p.location || 'N/A'} | Provisioned {p.createdAt}</p>
                       <p className="text-[11px] text-slate-600 line-clamp-3 mt-1.5 leading-relaxed">{p.description}</p>
 
                       {/* Project Disciplines */}
                       {p.disciplines && p.disciplines.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {p.disciplines.map(disc => (
-                            <span key={disc} className="text-[8.5px] uppercase tracking-wide px-1.5 py-0.5 rounded font-extrabold border bg-slate-50 text-slate-500 border-slate-100">
+                            <span key={disc} className="text-[8.5px] uppercase tracking-wide px-1.5 py-0.5 rounded font-extrabold border bg-slate-50 text-slate-600 border-slate-100">
                               {disc}
                             </span>
                           ))}

@@ -440,7 +440,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               <span className="hidden sm:inline group-hover:inline group-focus:inline group-active:inline whitespace-nowrap">Methodology & Presets</span>
             </button>
           </div>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono ml-1 hidden md:inline">
+          <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest font-mono ml-1 hidden md:inline">
             Active Delivery Standard: <span className="text-indigo-600 font-extrabold">{visualSettings?.activeMethodology || 'waterfall'}</span>
           </span>
         </div>
@@ -978,7 +978,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     activeDragOverStageId === stage.id ? 'border-indigo-300 bg-indigo-50/30' : 'border-slate-100'
                   }`}>
                     <Plus className={`w-5 h-5 mb-1 transition-colors ${activeDragOverStageId === stage.id ? 'text-indigo-400' : 'text-slate-200'}`} />
-                    <p className="text-[10px] font-bold uppercase tracking-widest">{activeDragOverStageId === stage.id ? 'Drop to Add' : 'Empty Column'}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">{activeDragOverStageId === stage.id ? 'Drop to Add' : 'Empty Column'}</p>
                   </div>
                 ) : (
                   sortedStageTasks.map(task => {
@@ -1268,8 +1268,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                                 </span>
                               )}
 
-                              <div className={`flex items-center gap-0.5 text-[9px] ${isTaskOverdue ? 'text-rose-500 font-bold' : 'text-slate-400 font-medium'}`}>
-                                <AlertTriangle className={`w-3 h-3 ${isTaskOverdue ? 'text-rose-450 animate-pulse' : 'text-slate-300'}`} />
+                              <div className={`flex items-center gap-0.5 text-[9px] ${isTaskOverdue ? 'text-rose-500 font-bold' : 'text-slate-600 font-semibold'}`}>
+                                <AlertTriangle className={`w-3 h-3 ${isTaskOverdue ? 'text-rose-450 animate-pulse' : 'text-slate-500'}`} />
                                 <span className="whitespace-nowrap">Due: {task.dueDate}</span>
                               </div>
 

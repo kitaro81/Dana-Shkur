@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, startTransition } from 'react';
 import { Project, Task, User, WorkflowStage, Comment, Notification, TeamActivity, Message, UserRole, TaskType, Label, FlowPermissions, VisualSettings, ReportTemplateSettings, TeamConversation } from './types';
 import { 
   INITIAL_PROJECTS, 
@@ -556,8 +556,16 @@ export default function App() {
   }, [visualSettings.welcomeModalEnabled]);
 
   const handleDismissWelcomeModal = () => {
-    setShowWelcomeModal(false);
-    sessionStorage.setItem('welcome_modal_dismissed', 'true');
+    startTransition(() => {
+      setShowWelcomeModal(false);
+    });
+    setTimeout(() => {
+      try {
+        sessionStorage.setItem('welcome_modal_dismissed', 'true');
+      } catch (e) {
+        console.error(e);
+      }
+    }, 0);
   };
   const [selectedProjectId, setSelectedProjectId] = useState<string>(() => {
     return INITIAL_PROJECTS[0]?.id || '';
@@ -777,7 +785,7 @@ export default function App() {
     setToasts(prev => [...prev, { id, text, type, onUndo }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, onUndo ? 7500 : 4500);
+    }, 1000);
   };
 
   // --- Task Operations Actions ---
@@ -1260,6 +1268,9 @@ export default function App() {
   // Filters projects and tasks visible to team members
   const visibleTasks = useMemo(() => {
     return tasks.filter(t => {
+      // Exclude soft-deleted tasks
+      if (t.isDeleted) return false;
+
       // Check if task type is in its role's permitted visibility list
       const allowed = flowPermissions?.visibility[currentUser.role] || [];
       if (!allowed.includes(t.type)) return false;
@@ -1298,10 +1309,21 @@ export default function App() {
       triggerToast('Only administrators can delete tasks.', 'alert');
       return;
     }
-    if (confirm('Are you sure you want to permanently delete this task?')) {
-      setTasks(prev => prev.filter(t => t.id !== taskId));
-      triggerToast('Task permanently deleted.', 'info');
-      setSelectedTaskId(null);
+    const taskToDelete = tasks.find(t => t.id === taskId);
+    if (!taskToDelete) return;
+
+    if (taskToDelete.isDeleted) {
+      if (confirm('Are you sure you want to permanently delete this task? This action cannot be undone.')) {
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+        triggerToast('Task permanently deleted.', 'info');
+        setSelectedTaskId(null);
+      }
+    } else {
+      if (confirm('Are you sure you want to delete this task? Admins can still view and restore it from the Archive Vault.')) {
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, isDeleted: true, updatedAt: new Date().toISOString() } : t));
+        triggerToast('Task moved to deleted trash bin.', 'info');
+        setSelectedTaskId(null);
+      }
     }
   };
 
@@ -1312,6 +1334,10 @@ export default function App() {
     }
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
+        if (t.isDeleted) {
+          triggerToast('Task restored to board successfully.', 'success');
+          return { ...t, isDeleted: false, archived: false, updatedAt: new Date().toISOString() };
+        }
         const nextArchived = !t.archived;
         triggerToast(nextArchived ? 'Task archived successfully.' : 'Task restored to board.', 'success');
         return { ...t, archived: nextArchived, updatedAt: new Date().toISOString() };
@@ -1481,39 +1507,7 @@ export default function App() {
       {/* TOP DECK HEADER BAR */}
       <header className="h-14 border-b border-slate-200 bg-white flex items-center justify-between sticky top-0 z-40 transition-colors">
         <div className="px-2 sm:px-6 justify-between w-full flex items-center">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <h1 className="text-sm font-semibold tracking-tight text-slate-900 truncate max-w-[140px] sm:max-w-none">{visualSettings.workspaceName || 'Nexus Design Ops'}</h1>
-            </div>
-
-            {/* Notification trigger bell */}
-            <div className="relative">
-              <button
-                onClick={() => setShowNotificationCenter(!showNotificationCenter)}
-                className="group flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-slate-50 rounded text-slate-400 hover:text-slate-600 transition-colors relative cursor-pointer border border-transparent"
-              >
-                <Bell className="w-4 h-4 flex-shrink-0" />
-                <span className="hidden group-hover:inline group-focus:inline group-active:inline text-xs font-semibold whitespace-nowrap">Notifications</span>
-                {unreadNotifCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 block w-1.5 h-1.5 rounded-full bg-indigo-600" />
-                )}
-              </button>
-
-              {showNotificationCenter && (
-                <NotificationCenter
-                  notifications={notifications}
-                  currentUserEmail={currentUser.email}
-                  onMarkAsRead={handleMarkNotificationAsRead}
-                  onClearAll={handleClearNotifications}
-                  onClose={() => setShowNotificationCenter(false)}
-                  align="left"
-                />
-              )}
-            </div>
-            
-            {/* Desktop Command Palette Trigger Removed */}
-          </div>
-
+          
           <div className="flex items-center gap-2.5">
             {/* INTERACTIVE PROFILE SWITCHER & PORTAL */}
             <div className="relative">
@@ -1548,7 +1542,7 @@ export default function App() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-lg p-4 z-50 space-y-4"
+                      className="absolute left-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-lg p-4 z-50 space-y-4"
                     >
                       {/* User Info Header */}
                       <div className="text-left space-y-1">
@@ -1639,6 +1633,40 @@ export default function App() {
             {/* Mobile Command Palette Trigger removed per request */}
 
           </div>
+
+          <div className="flex items-center gap-4">
+            {/* Notification trigger bell */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotificationCenter(!showNotificationCenter)}
+                className="group flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-slate-50 rounded text-slate-400 hover:text-slate-600 transition-colors relative cursor-pointer border border-transparent"
+              >
+                <Bell className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden group-hover:inline group-focus:inline group-active:inline text-xs font-semibold whitespace-nowrap">Notifications</span>
+                {unreadNotifCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 block w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                )}
+              </button>
+
+              {showNotificationCenter && (
+                <NotificationCenter
+                  notifications={notifications}
+                  currentUserEmail={currentUser.email}
+                  onMarkAsRead={handleMarkNotificationAsRead}
+                  onClearAll={handleClearNotifications}
+                  onClose={() => setShowNotificationCenter(false)}
+                  align="right"
+                />
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-semibold tracking-tight text-slate-900 truncate max-w-[140px] sm:max-w-none">{visualSettings.workspaceName || 'Nexus Design Ops'}</h1>
+            </div>
+            
+            {/* Desktop Command Palette Trigger Removed */}
+          </div>
+
         </div>
       </header>
 
@@ -1648,7 +1676,7 @@ export default function App() {
           
           {/* Multi-project dropdown */}
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest shrink-0">Project:</span>
+            <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest shrink-0">Project:</span>
             <select
               className="flex-1 sm:flex-initial px-2 py-1 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded hover:bg-slate-50 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-100 focus:border-indigo-500 cursor-pointer min-w-0"
               value={selectedProjectId}
@@ -1798,7 +1826,7 @@ export default function App() {
         <section className="bg-white border-b border-slate-100">
           <div className="px-2 py-3 sm:px-6 mx-auto">
             <h2 className="text-sm font-bold text-slate-900 leading-tight">
-              {activeProject.name} <span className="text-xs font-normal text-slate-400">({activeProject.code})</span>
+              {activeProject.name} <span className="text-xs font-normal text-slate-600">({activeProject.code})</span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5 select-none">{activeProject.description}</p>
           </div>
@@ -1918,7 +1946,7 @@ export default function App() {
                 onSendBulkMessage={handleSendBulkMessage}
                 showArchivedProjects={showArchivedProjects}
                 setShowArchivedProjects={setShowArchivedProjects}
-                tasks={tasks}
+                tasks={tasks.filter(t => !t.isDeleted)}
                 activities={activities}
               />
             )}
@@ -1941,7 +1969,7 @@ export default function App() {
 
             {activeTab === 'resource_load' && currentUser.role === 'admin' && (
               <ResourceLoadPanel
-                tasks={tasks}
+                tasks={tasks.filter(t => !t.isDeleted)}
                 users={users}
                 stages={stages}
                 projects={projects}
@@ -1950,7 +1978,7 @@ export default function App() {
 
             {activeTab === 'my_overview' && (
               <MyOverviewPanel
-                tasks={tasks}
+                tasks={tasks.filter(t => !t.isDeleted)}
                 projects={projects}
                 users={users}
                 stages={stages}
@@ -1968,7 +1996,7 @@ export default function App() {
 
             {activeTab === 'export' && (
               <ExportPanel
-                tasks={tasks}
+                tasks={tasks.filter(t => !t.isDeleted)}
                 projects={projects}
                 activities={activities}
                 users={users}
@@ -1979,7 +2007,7 @@ export default function App() {
               <GoogleSheetsSyncPanel
                 localData={{
                   projects,
-                  tasks,
+                  tasks: tasks.filter(t => !t.isDeleted),
                   users,
                   comments,
                   activities,
@@ -2188,7 +2216,7 @@ export default function App() {
           <CommandPalette
             isOpen={isCommandPaletteOpen}
             onClose={() => setIsCommandPaletteOpen(false)}
-            tasks={tasks}
+            tasks={tasks.filter(t => !t.isDeleted)}
             projects={projects}
             users={users}
             onSelectTask={(taskId) => {
@@ -2210,10 +2238,10 @@ export default function App() {
 
       {/* MINIMAL FOOTER */}
       {activeTab !== 'messages' && (
-        <footer className="border-t border-slate-100 py-6 text-center text-xs text-slate-400 mt-12 select-none">
+        <footer className="border-t border-slate-100 py-6 text-center text-xs text-slate-600 mt-12 select-none">
           <div className="px-2 sm:px-6 flex flex-col sm:flex-row justify-between items-center gap-2">
             <p>{visualSettings.footerText || '© 2026 Nexus Design Ops. Standard workflow management.'}</p>
-            <div className="flex gap-3 text-[10px] text-slate-400">
+            <div className="flex gap-3 text-[10px] text-slate-600">
               <span>{stages.length} Lanes</span>
               <span>{users.length} Members</span>
               <span>{tasks.length} Tasks</span>

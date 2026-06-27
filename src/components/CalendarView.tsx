@@ -1017,7 +1017,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     </div>
                     <div className="min-w-0">
                       <span className="text-[10px] font-bold text-slate-700 block leading-none">{selectedTaskAssignee.name}</span>
-                      <span className="text-[8px] font-mono text-slate-400 block mt-0.5">{selectedTaskAssignee.discipline?.toUpperCase() || 'GENERAL'}</span>
+                      <span className="text-[9.5px] font-mono text-slate-600 block mt-0.5">{selectedTaskAssignee.discipline?.toUpperCase() || 'GENERAL'}</span>
                     </div>
                   </div>
                 )}
@@ -1175,16 +1175,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 animate-pulse" style={{ backgroundColor: m.color }} />
                   <div className="min-w-0">
                     <span className="font-bold text-slate-850 block truncate" title={m.title}>{m.title}</span>
-                    <span className="text-[8px] font-mono text-slate-400 font-bold block">{m.date}</span>
+                    <span className="text-[9.5px] font-mono text-slate-600 font-bold block">{m.date}</span>
                     {m.description && (
-                      <span className="text-[8px] text-slate-500 line-clamp-1 mt-0.5">{m.description}</span>
+                      <span className="text-[9.5px] text-slate-650 line-clamp-1 mt-0.5">{m.description}</span>
                     )}
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleDeleteMarker(m.id)}
-                  className="p-1 text-slate-400 hover:text-red-500 rounded hover:bg-slate-50 transition-colors cursor-pointer shrink-0"
+                  className="p-1 text-slate-500 hover:text-red-500 rounded hover:bg-slate-50 transition-colors cursor-pointer shrink-0"
                   title="Remove Marker"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -1192,7 +1192,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               </div>
             ))}
             {taskMarkers.length === 0 && (
-              <p className="text-[9px] text-slate-400 italic text-center py-2">No milestones pinned to the schedule.</p>
+              <p className="text-[10.5px] text-slate-600 italic text-center py-2">No milestones pinned to the schedule.</p>
             )}
           </div>
         </div>

@@ -521,11 +521,11 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                                 <div key={depId} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white border border-slate-100 text-xs shadow-3xs">
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
                                     <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isDepCompleted ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
-                                    <span className={`font-semibold truncate text-slate-700 ${isDepCompleted ? 'line-through text-slate-400 font-normal' : ''}`}>
+                                    <span className={`font-semibold truncate text-slate-700 ${isDepCompleted ? 'line-through text-slate-600 font-normal' : ''}`}>
                                       {depTask.title}
                                     </span>
-                                    <span className={`text-[8px] tracking-tight px-1.5 py-0.2 rounded font-bold border uppercase flex-shrink-0 ${
-                                      isDepCompleted ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+                                    <span className={`text-[9.5px] tracking-tight px-1.5 py-0.5 rounded font-bold border uppercase flex-shrink-0 ${
+                                      isDepCompleted ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'
                                     }`}>
                                       {isDepCompleted ? 'Completed' : 'Pending'}
                                     </span>

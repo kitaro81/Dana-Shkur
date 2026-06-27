@@ -228,11 +228,11 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
         }`}>
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Over-allocated Team</p>
+              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Over-allocated Team</p>
               <h3 className={`text-2xl font-bold mt-1 ${
                 stats.overAllocatedCount > 0 ? 'text-red-600' : 'text-slate-900'
               }`}>
-                {stats.overAllocatedCount} <span className="text-xs font-normal text-slate-400">/ {stats.totalUsers}</span>
+                {stats.overAllocatedCount} <span className="text-xs font-semibold text-slate-600">/ {stats.totalUsers}</span>
               </h3>
             </div>
             <div className={`p-2 rounded-lg ${
@@ -254,7 +254,7 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
         <div className="bg-white border border-slate-200 p-4 rounded-xl">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Average Capacity Used</p>
+              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Average Capacity Used</p>
               <h3 className="text-2xl font-bold text-slate-900 mt-1">
                 {stats.averageLoadPercent}%
               </h3>
@@ -277,9 +277,9 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
         <div className="bg-white border border-slate-200 p-4 rounded-xl">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Monitored Load</p>
+              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Current Monitored Load</p>
               <h3 className="text-2xl font-bold text-slate-900 mt-1">
-                {stats.totalActiveTasks} <span className="text-xs font-normal text-slate-400">Tasks</span>
+                {stats.totalActiveTasks} <span className="text-xs font-semibold text-slate-600">Tasks</span>
               </h3>
             </div>
             <div className="p-2 rounded-lg bg-slate-100 text-slate-600">
@@ -389,7 +389,7 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
         </div>
 
         {/* Visualized Stacked Stage Chart */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 p-5 rounded-xl flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-white border border-slate-200 p-5 rounded-xl flex flex-col justify-between min-w-0 overflow-hidden">
           <div className="space-y-1">
             <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono">
               Tasks Distribution Across Pipeline
@@ -400,9 +400,9 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
           </div>
 
           {/* Recharts Container */}
-          <div className="h-[280px] w-full mt-4 flex items-center justify-center">
+          <div className="h-[280px] w-full mt-4 min-w-0 relative">
             {chartData.length === 0 ? (
-              <div className="text-xs text-slate-400 text-center py-8">
+              <div className="h-full w-full flex items-center justify-center text-xs text-slate-400 text-center py-8">
                 No matching team members found with assigned tasks.
               </div>
             ) : (
@@ -450,6 +450,7 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
                       stackId="a" 
                       fill={s.color} 
                       radius={[0, 0, 0, 0]} 
+                      maxBarSize={45}
                     />
                   ))}
                 </BarChart>
