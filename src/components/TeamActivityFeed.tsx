@@ -158,12 +158,9 @@ export const TeamActivityFeed: React.FC<TeamActivityFeedProps> = ({ activities, 
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-3">
                       {activity.userId !== 'system' && (
-                        <img
-                          src={activity.userAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'}
-                          alt={activity.userName}
-                          className="w-10 h-10 rounded-full object-cover border border-slate-100 shadow-sm flex-shrink-0"
-                          referrerPolicy="no-referrer"
-                        />
+                        <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-sm font-bold border border-slate-200 flex-shrink-0">
+                          {activity.userName[0] || 'U'}
+                        </div>
                       )}
                       {activity.userId === 'system' && (
                         <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 flex-shrink-0">

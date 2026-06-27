@@ -489,11 +489,9 @@ export function ResourceLoadPanel({ tasks, users, stages, projects }: ResourceLo
                   <tr key={ul.user.id} className="hover:bg-slate-50/40 transition-colors">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <img 
-                          src={ul.user.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=120'} 
-                          alt={ul.user.name} 
-                          className="w-7 h-7 rounded-full object-cover ring-1 ring-slate-100"
-                        />
+                        <div className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-xs font-bold ring-1 ring-slate-100 flex-shrink-0">
+                          {ul.user.name[0]}
+                        </div>
                         <div>
                           <p className="font-bold text-slate-800">{ul.user.name}</p>
                           <p className="text-[10px] text-slate-400">{ul.user.email}</p>

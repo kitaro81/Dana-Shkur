@@ -411,21 +411,8 @@ export function MyOverviewPanel({
         </div>
 
         {filteredAndSortedTasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-            <img 
-              src="/src/assets/images/empty_tasks_illustration_1782378263853.jpg" 
-              alt="No assigned tasks illustration" 
-              referrerPolicy="no-referrer"
-              className="w-48 h-48 object-cover rounded-2xl border border-slate-150 shadow-sm mb-5 animate-fadeIn"
-            />
-            <h4 className="text-sm font-bold text-slate-850">
-              {stats.total === 0 ? "Welcome to Your Overview!" : "No Assigned Tasks Found"}
-            </h4>
-            <p className="text-xs text-slate-500 max-w-md mt-1.5 leading-relaxed">
-              {stats.total === 0 
-                ? "You don't have any assigned tasks in your queue right now. Go to the Kanban Board to create new design tasks or assign yourself to existing ones!"
-                : "You are completely caught up under the current filters! Change your project, priority, or search preferences to find other states."}
-            </p>
+          <div className="flex flex-col items-center justify-center py-12 px-6 text-center text-xs text-slate-400">
+            No assigned tasks
           </div>
         ) : (
           <div className="divide-y divide-slate-100">

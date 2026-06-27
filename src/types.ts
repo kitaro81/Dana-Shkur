@@ -137,6 +137,7 @@ export interface VisualSettings {
   masterPassword?: string;
   autoArchiveApprovedTasks?: boolean;
   compactMode?: boolean;
+  footerText?: string;
 }
 
 export interface Message {

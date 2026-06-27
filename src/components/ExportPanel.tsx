@@ -318,18 +318,6 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ tasks, projects, activ
             </div>
           </div>
 
-          {/* Quick Tip */}
-          <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0">
-              <ChevronRight className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-amber-900 uppercase tracking-tight">Pro Tip</h4>
-              <p className="text-[11px] text-amber-800 leading-relaxed mt-0.5">
-                PDF exports are optimized for printing and formal reporting. Use CSV or Excel for data analysis in external tools like Google Sheets or Microsoft Excel.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

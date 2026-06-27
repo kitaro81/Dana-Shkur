@@ -768,16 +768,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       {/* Lane details block */}
                       <div className="w-[180px] shrink-0 p-3 flex flex-col justify-center border-r border-slate-100 bg-slate-50/40 select-none">
                         <div className="flex items-center gap-2">
-                          {lane.avatarUrl ? (
-                            <img 
-                              src={lane.avatarUrl} 
-                              alt={lane.name} 
-                              referrerPolicy="no-referrer"
-                              className="w-5 h-5 rounded-full object-cover shrink-0" 
-                            />
-                          ) : (
-                            <div className="w-1.5 h-6 rounded-full shrink-0" style={{ backgroundColor: lane.color }} />
-                          )}
+                          <div className="w-5 h-5 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-[9px] font-bold shrink-0">
+                            {lane.name[0]}
+                          </div>
                           <div className="min-w-0">
                             <h4 className="text-xs font-bold text-slate-800 truncate leading-tight" title={lane.name}>{lane.name}</h4>
                             <span className="text-[9px] font-mono font-bold text-slate-450 uppercase leading-none block mt-0.5">{lane.subtitle}</span>
@@ -923,16 +916,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                                       className="w-4 h-4 rounded-full bg-white/35 flex items-center justify-center text-[7px] font-extrabold text-white border border-white/50 overflow-hidden shrink-0"
                                       title={`Assignee: ${users.find(u => u.id === pt.task.assignedTo)?.name || 'Unknown'}`}
                                     >
-                                      {users.find(u => u.id === pt.task.assignedTo)?.avatarUrl ? (
-                                        <img 
-                                          src={users.find(u => u.id === pt.task.assignedTo)?.avatarUrl} 
-                                          alt="Avatar"
-                                          referrerPolicy="no-referrer"
-                                          className="w-full h-full object-cover" 
-                                        />
-                                      ) : (
-                                        users.find(u => u.id === pt.task.assignedTo)?.name.substring(0, 2).toUpperCase() || '??'
-                                      )}
+                                      {users.find(u => u.id === pt.task.assignedTo)?.name.substring(0, 2).toUpperCase() || '??'}
                                     </div>
                                   )}
                                 </div>
@@ -1032,12 +1016,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
                 {selectedTaskAssignee && (
                   <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-                    <img 
-                      src={selectedTaskAssignee.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'} 
-                      alt={selectedTaskAssignee.name} 
-                      className="w-5 h-5 rounded-full border border-white"
-                      referrerPolicy="no-referrer"
-                    />
+                    <div className="w-5 h-5 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-[9px] font-bold border border-slate-200 flex-shrink-0">
+                      {selectedTaskAssignee.name[0]}
+                    </div>
                     <div className="min-w-0">
                       <span className="text-[10px] font-bold text-slate-700 block leading-none">{selectedTaskAssignee.name}</span>
                       <span className="text-[8px] font-mono text-slate-400 block mt-0.5">{selectedTaskAssignee.discipline?.toUpperCase() || 'GENERAL'}</span>

@@ -367,6 +367,7 @@ export default function App() {
       agileEnforceSprintAssignment: false,
       masterPassword: 'pms26@212981',
       compactMode: false,
+      footerText: '© 2026 Nexus Design Ops. Standard workflow management.',
     };
     if (saved) {
       try {
@@ -1404,20 +1405,7 @@ export default function App() {
               <h1 className="text-sm font-semibold tracking-tight text-slate-900 truncate max-w-[140px] sm:max-w-none">{visualSettings.workspaceName || 'Nexus Design Ops'}</h1>
             </div>
             
-            {/* Desktop Command Palette Trigger */}
-            <button
-              onClick={() => setIsCommandPaletteOpen(true)}
-              className="hidden md:flex items-center gap-2 px-2.5 py-1 text-[11px] text-slate-400 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 hover:text-slate-600 transition-all cursor-pointer w-52 justify-between"
-              title="Search (Ctrl+K)"
-            >
-              <div className="flex items-center gap-1.5">
-                <Search className="w-3.5 h-3.5 text-slate-400" />
-                <span>Search...</span>
-              </div>
-              <kbd className="px-1.5 py-0.5 text-[8px] font-mono font-bold bg-white text-slate-400 border border-slate-200 rounded select-none shadow-2xs">
-                Ctrl+K
-              </kbd>
-            </button>
+            {/* Desktop Command Palette Trigger Removed */}
           </div>
 
           <div className="flex items-center gap-2.5">
@@ -2096,18 +2084,16 @@ export default function App() {
       </AnimatePresence>
 
       {/* MINIMAL FOOTER */}
-      {activeTab === 'board' && (
-        <footer className="border-t border-slate-100 py-6 text-center text-xs text-slate-400 mt-12 select-none">
-          <div className="px-2 sm:px-6 flex flex-col sm:flex-row justify-between items-center gap-2">
-            <p>© 2026 Nexus Design Ops. Standard workflow management.</p>
-            <div className="flex gap-3 text-[10px] text-slate-400">
-              <span>{stages.length} Lanes</span>
-              <span>{users.length} Members</span>
-              <span>{tasks.length} Tasks</span>
-            </div>
+      <footer className="border-t border-slate-100 py-6 text-center text-xs text-slate-400 mt-12 select-none">
+        <div className="px-2 sm:px-6 flex flex-col sm:flex-row justify-between items-center gap-2">
+          <p>{visualSettings.footerText || '© 2026 Nexus Design Ops. Standard workflow management.'}</p>
+          <div className="flex gap-3 text-[10px] text-slate-400">
+            <span>{stages.length} Lanes</span>
+            <span>{users.length} Members</span>
+            <span>{tasks.length} Tasks</span>
           </div>
-        </footer>
-      )}
+        </div>
+      </footer>
 
     </div>
   );

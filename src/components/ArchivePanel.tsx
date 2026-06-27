@@ -320,11 +320,7 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({
                                   title={`${u.name} (${u.discipline || 'general'})`}
                                   className="w-5 h-5 rounded-full bg-slate-200 border border-white text-[9px] font-bold text-slate-700 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
                                 >
-                                  {u.avatarUrl ? (
-                                    <img src={u.avatarUrl} alt={u.name} referrerPolicy="no-referrer" className="w-full h-full rounded-full object-cover" />
-                                  ) : (
-                                    u.name.charAt(0)
-                                  )}
+                                  {u.name.charAt(0)}
                                 </div>
                               ))}
                             </div>

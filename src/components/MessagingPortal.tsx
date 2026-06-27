@@ -284,13 +284,9 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                     }`}
                   >
                     <div className="relative shrink-0">
-                      {user.avatarUrl ? (
-                        <img src={user.avatarUrl} className="w-9 h-9 rounded-lg object-cover" alt="" />
-                      ) : (
-                        <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
-                          {user.name[0]}
-                        </div>
-                      )}
+                      <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                        {user.name[0]}
+                      </div>
                       <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-white rounded-full ${user.deactivated ? 'bg-slate-300' : 'bg-emerald-500'}`} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -343,8 +339,6 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                     <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
                       <Hash className="w-5.5 h-5.5" />
                     </div>
-                  ) : selectedUser?.avatarUrl ? (
-                    <img src={selectedUser.avatarUrl} className="w-10 h-10 rounded-xl object-cover" alt="" />
                   ) : (
                     <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
                       {selectedUser?.name[0]}
@@ -396,13 +390,9 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                       {!isMe && (
                         <div className="w-8 shrink-0">
                           {showAvatar && (
-                            msgSender?.avatarUrl ? (
-                              <img src={msgSender.avatarUrl} className="w-8 h-8 rounded-lg object-cover" alt="" />
-                            ) : (
-                              <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-bold">
-                                {msgSender?.name[0] || 'U'}
-                              </div>
-                            )
+                            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-bold">
+                              {msgSender?.name[0] || 'U'}
+                            </div>
                           )}
                         </div>
                       )}

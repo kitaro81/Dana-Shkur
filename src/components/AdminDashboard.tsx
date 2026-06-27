@@ -796,12 +796,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           onChange={() => toggleUserSelection(u.id)}
                           className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
                         />
-                        <img
-                          src={u.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'}
-                          alt={u.name}
-                          className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-                          referrerPolicy="no-referrer"
-                        />
+                        <div className="w-9 h-9 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-xs font-bold flex-shrink-0 border border-slate-200">
+                          {u.name[0]}
+                        </div>
                       </div>
                       <div className="min-w-0 cursor-pointer" onClick={() => toggleUserSelection(u.id)}>
                         <div className="flex items-center gap-2 font-mono">
@@ -1118,13 +1115,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               const u = users.find(user => user.id === userId);
                               if (!u) return null;
                               return (
-                                <img
+                                <div
                                   key={userId}
-                                  className="inline-block h-5 w-5 rounded-full ring-2 ring-white object-cover"
-                                  src={u.avatarUrl || `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 900000)}?auto=format&fit=crop&q=80&w=120`}
-                                  alt={u.name}
+                                  className="inline-block h-5 w-5 rounded-full ring-2 ring-white bg-indigo-50 text-indigo-700 flex items-center justify-center text-[8px] font-bold"
                                   title={`${u.name} (${u.role})`}
-                                />
+                                >
+                                  {u.name[0]}
+                                </div>
                               );
                             })}
                           </div>
@@ -1528,6 +1525,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     ))}
                   </div>
                   <p className="text-[9px] text-slate-400">Adjust padding, sizes, and spacing of tasks inside columns.</p>
+                </div>
+
+                {/* Custom Footer Text */}
+                <div className="space-y-1.5 col-span-2">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase">Global Footer Text</label>
+                  <input
+                    type="text"
+                    value={visualSettings.footerText || ''}
+                    onChange={(e) => onUpdateVisualSettings({ ...visualSettings, footerText: e.target.value })}
+                    placeholder="e.g. © 2026 Nexus Design Ops. Standard workflow management."
+                    className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:ring-1 focus:ring-indigo-50/50 focus:border-indigo-400 bg-white"
+                  />
+                  <p className="text-[9px] text-slate-400">Updates the copyright and info signature text displayed in the footer across all panels.</p>
                 </div>
               </div>
             </div>

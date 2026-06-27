@@ -787,14 +787,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         <span className="font-bold">🔒 Assigned to Yourself</span>
                       </div>
                       <div className="flex items-center gap-2 bg-white px-2 py-1.5 border border-amber-100 rounded">
-                        {currentUser.avatarUrl && (
-                          <img 
-                            src={currentUser.avatarUrl} 
-                            alt={currentUser.name} 
-                            className="w-4 h-4 rounded-full"
-                            referrerPolicy="no-referrer"
-                          />
-                        )}
+                        <div className="w-4 h-4 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-[9px] font-bold">
+                          {currentUser.name[0]}
+                        </div>
                         <span className="font-semibold text-slate-700">{currentUser.name}</span>
                       </div>
                     </div>
@@ -1241,12 +1236,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           <div className="flex justify-between items-center bg-slate-50/40 p-1 rounded -mx-1 -mb-1 mt-2">
                             {assignee ? (
                               <div className="flex items-center gap-1">
-                                <img 
-                                  src={assignee.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'} 
-                                  alt={assignee.name}
-                                  className="w-3.5 h-3.5 rounded-full object-cover border border-white"
-                                  referrerPolicy="no-referrer"
-                                />
+                                <div className="w-4 h-4 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-[9px] font-bold border border-white">
+                                  {assignee.name[0]}
+                                </div>
                                 <span className="text-[10px] text-slate-600 truncate max-w-[80px]">{assignee.name}</span>
                               </div>
                             ) : (

@@ -162,17 +162,9 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
                       <div className="flex items-start gap-4">
                         {/* Profile Image with status ring */}
                         <div className="relative shrink-0">
-                          {user.avatarUrl ? (
-                            <img 
-                              src={user.avatarUrl} 
-                              alt={user.name} 
-                              className="w-12 h-12 rounded-full object-cover border-2 border-white ring-2 ring-slate-100 group-hover:ring-indigo-200 transition-all"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-sm font-bold border-2 border-white ring-2 ring-slate-100 group-hover:ring-indigo-200">
-                              {user.name[0]}
-                            </div>
-                          )}
+                          <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-sm font-bold border-2 border-white ring-2 ring-slate-100 group-hover:ring-indigo-200">
+                            {user.name[0]}
+                          </div>
                           <div className="absolute -bottom-1 -right-1 bg-white p-0.5 rounded-full shadow-3xs border border-slate-100">
                             <span className="block w-2.5 h-2.5 rounded-full bg-emerald-500" />
                           </div>
@@ -267,13 +259,9 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
                   </button>
                   <div className="flex items-center gap-4">
                     <div className="shrink-0">
-                      {challengingUser.avatarUrl ? (
-                        <img src={challengingUser.avatarUrl} className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20 shadow-lg" alt="" />
-                      ) : (
-                        <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-xl font-bold border-2 border-white/20">
-                          {challengingUser.name[0]}
-                        </div>
-                      )}
+                      <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-xl font-bold border-2 border-white/20">
+                        {challengingUser.name[0]}
+                      </div>
                     </div>
                     <div>
                       <h3 className="text-lg font-bold leading-tight">{challengingUser.name}</h3>

@@ -639,12 +639,9 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                         className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 relative group"
                       >
                         <div className="flex gap-2.5 items-start">
-                          <img
-                            src={commentCreator?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'}
-                            alt={comment.userName}
-                            className="w-6 h-6 rounded-full object-cover flex-shrink-0"
-                            referrerPolicy="no-referrer"
-                          />
+                          <div className="w-6 h-6 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                            {comment.userName[0]}
+                          </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-baseline justify-between mb-0.5">
                               <span className="text-xs font-semibold text-slate-800">{comment.userName}</span>
@@ -686,12 +683,9 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
               {assignedUser ? (
                 <div className="flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-100">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={assignedUser.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60'}
-                      alt={assignedUser.name}
-                      className="w-10 h-10 rounded-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
+                    <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-sm font-bold border border-slate-200">
+                      {assignedUser.name[0]}
+                    </div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-800 truncate">{assignedUser.name}</p>
                       <div className="flex flex-wrap gap-1 mt-0.5">
