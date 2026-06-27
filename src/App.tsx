@@ -10,6 +10,31 @@ import {
   INITIAL_LABELS,
   INITIAL_ACTIVITIES
 } from './data/mockData';
+import { db, handleFirestoreError, OperationType } from './utils/firebase';
+import { collection, onSnapshot, doc } from 'firebase/firestore';
+import {
+  dbSaveUser,
+  dbDeleteUser,
+  dbSaveProject,
+  dbDeleteProject,
+  dbSaveStage,
+  dbSaveTask,
+  dbDeleteTask,
+  dbSaveComment,
+  dbDeleteComment,
+  dbSaveNotification,
+  dbDeleteNotification,
+  dbSaveActivity,
+  dbSaveLabel,
+  dbSaveMessage,
+  dbDeleteMessage,
+  dbSaveConversation,
+  dbDeleteConversation,
+  dbSaveVisualSettings,
+  dbSaveReportTemplateSettings,
+  dbSaveFlowPermissions,
+  dbSeedInitialDataIfNeeded
+} from './utils/firebaseSync';
 import { KanbanBoard } from './components/KanbanBoard';
 import { TaskDetailsModal } from './components/TaskDetailsModal';
 import { ReportsPanel } from './components/ReportsPanel';
@@ -257,6 +282,7 @@ export default function App() {
       createdBy: currentUser.id
     };
     setTeamConversations(prev => [...prev, newConv]);
+    dbSaveConversation(newConv);
     
     addActivity({
       type: 'project_update',
@@ -278,6 +304,7 @@ export default function App() {
       read: false
     };
     setMessages(prev => [...prev, newMessage]);
+    dbSaveMessage(newMessage);
 
     const channel = teamConversations.find(c => c.id === receiverId);
     if (channel) {
@@ -307,17 +334,21 @@ export default function App() {
       const hasUnread = prev.some(m => m.senderId === senderId && m.receiverId === currentUser.id && !m.read);
       if (!hasUnread) return prev;
       
-      return prev.map(m => 
-        (m.senderId === senderId && m.receiverId === currentUser.id && !m.read) 
-          ? { ...m, read: true } 
-          : m
-      );
+      return prev.map(m => {
+        if (m.senderId === senderId && m.receiverId === currentUser.id && !m.read) {
+          const updated = { ...m, read: true };
+          dbSaveMessage(updated);
+          return updated;
+        }
+        return m;
+      });
     });
   };
 
   const handleDeleteMessage = (messageId: string) => {
     if (currentUser.role !== 'admin') return;
     setMessages(prev => prev.filter(m => m.id !== messageId));
+    dbDeleteMessage(messageId);
     triggerToast('Message deleted successfully.', 'success');
   };
 
@@ -336,6 +367,7 @@ export default function App() {
 
       setTeamConversations(prev => prev.filter(c => c.id !== conversationId));
       setMessages(prev => prev.filter(m => m.receiverId !== conversationId));
+      dbDeleteConversation(conversationId);
 
       addActivity({
         type: 'project_update',
@@ -348,10 +380,19 @@ export default function App() {
 
       triggerToast(`Conversation #${channelName} deleted.`, 'success');
     } else {
-      setMessages(prev => prev.filter(m => 
-        !(m.senderId === currentUser.id && m.receiverId === conversationId) &&
-        !(m.senderId === conversationId && m.receiverId === currentUser.id)
-      ));
+      // For private chats, delete the filtered messages in Firestore
+      setMessages(prev => {
+        const deletedMsgs = prev.filter(m => 
+          (m.senderId === currentUser.id && m.receiverId === conversationId) ||
+          (m.senderId === conversationId && m.receiverId === currentUser.id)
+        );
+        deletedMsgs.forEach(m => dbDeleteMessage(m.id));
+
+        return prev.filter(m => 
+          !(m.senderId === currentUser.id && m.receiverId === conversationId) &&
+          !(m.senderId === conversationId && m.receiverId === currentUser.id)
+        );
+      });
 
       const otherUser = users.find(u => u.id === conversationId);
       triggerToast(`Direct messages with ${otherUser?.name || 'User'} cleared.`, 'success');
@@ -373,6 +414,7 @@ export default function App() {
       read: false
     }));
     setMessages(prev => [...prev, ...newMessages]);
+    newMessages.forEach(m => dbSaveMessage(m));
     
     // Add a notification for the admin confirming the messages were sent
     const notification: Notification = {
@@ -385,6 +427,7 @@ export default function App() {
       type: 'success'
     };
     setNotifications(prev => [notification, ...prev]);
+    dbSaveNotification(notification);
 
     addActivity({
       type: 'message_sent',
@@ -463,6 +506,7 @@ export default function App() {
   const handleUpdateVisualSettings = (newSettings: VisualSettings) => {
     setVisualSettings(newSettings);
     localStorage.setItem('visualSettings', JSON.stringify(newSettings));
+    dbSaveVisualSettings(newSettings);
   };
 
   useEffect(() => {
@@ -473,6 +517,7 @@ export default function App() {
   const handleUpdateReportTemplateSettings = (newSettings: ReportTemplateSettings) => {
     setReportTemplateSettings(newSettings);
     localStorage.setItem('reportTemplateSettings', JSON.stringify(newSettings));
+    dbSaveReportTemplateSettings(newSettings);
   };
 
   // --- App View State ---
@@ -488,6 +533,7 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
     setActivities(prev => [newActivity, ...prev]);
+    dbSaveActivity(newActivity);
   };
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -498,6 +544,11 @@ export default function App() {
     const updatedUsers = users.map(u => u.id === userId ? { ...u, password } : u);
     setUsers(updatedUsers);
     localStorage.setItem('kanban_users', JSON.stringify(updatedUsers));
+
+    const updatedUser = updatedUsers.find(u => u.id === userId);
+    if (updatedUser) {
+      dbSaveUser(updatedUser);
+    }
 
     // Update currentUser if it's the one changing
     if (currentUser.id === userId) {
@@ -513,18 +564,17 @@ export default function App() {
     const userName = targetUser ? targetUser.name : 'User';
     triggerToast(`Password reset for ${userName} to the team master key.`, 'success');
     
-    setNotifications([
-      {
-        id: `pw-reset-${Date.now()}`,
-        userId: userId,
-        title: 'Security Reset',
-        message: 'Your account password has been reset to the team master key by an administrator.',
-        type: 'alert',
-        read: false,
-        createdAt: new Date().toISOString()
-      },
-      ...notifications
-    ]);
+    const newNotif: Notification = {
+      id: `pw-reset-${Date.now()}`,
+      userId: userId,
+      title: 'Security Reset',
+      message: 'Your account password has been reset to the team master key by an administrator.',
+      type: 'alert',
+      read: false,
+      createdAt: new Date().toISOString()
+    };
+    setNotifications(prev => [newNotif, ...prev]);
+    dbSaveNotification(newNotif);
   };
 
   // Auto-switch away from tabs that are turned off by the admin or role-restricted
@@ -597,6 +647,182 @@ export default function App() {
   const [showNotificationCenter, setShowNotificationCenter] = useState(false);
   const [toasts, setToasts] = useState<{ id: string; text: string; type: 'success' | 'info' | 'alert'; onUndo?: () => void }[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // --- Firestore Real-Time Subscriptions ---
+  useEffect(() => {
+    let active = true;
+
+    const initAndSubscribe = async () => {
+      // 1. Seed database with defaults if it is completely empty
+      await dbSeedInitialDataIfNeeded();
+
+      if (!active) return;
+
+      // 2. Subscribe to each Firestore collection in real-time
+      const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+        const list: User[] = [];
+        snapshot.forEach(doc => {
+          list.push(doc.data() as User);
+        });
+        if (list.length > 0) {
+          setUsers(list.map(u => {
+            if (u.id === 'user-admin') {
+              return { ...u, password: 'pms26@212981' };
+            }
+            return u;
+          }));
+        }
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'users');
+      });
+
+      const unsubProjects = onSnapshot(collection(db, 'projects'), (snapshot) => {
+        const list: Project[] = [];
+        snapshot.forEach(doc => {
+          list.push(doc.data() as Project);
+        });
+        setProjects(list);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'projects');
+      });
+
+      const unsubStages = onSnapshot(collection(db, 'stages'), (snapshot) => {
+        const list: WorkflowStage[] = [];
+        snapshot.forEach(doc => {
+          list.push(doc.data() as WorkflowStage);
+        });
+        if (list.length > 0) {
+          setStages(list.sort((a, b) => a.order - b.order));
+        }
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'stages');
+      });
+
+      const unsubTasks = onSnapshot(collection(db, 'tasks'), (snapshot) => {
+        const list: Task[] = [];
+        snapshot.forEach(doc => {
+          list.push(doc.data() as Task);
+        });
+        setTasks(list);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'tasks');
+      });
+
+      const unsubComments = onSnapshot(collection(db, 'comments'), (snapshot) => {
+        const list: Comment[] = [];
+        snapshot.forEach(doc => {
+          list.push(doc.data() as Comment);
+        });
+        setComments(list);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'comments');
+      });
+
+      const unsubNotifications = onSnapshot(collection(db, 'notifications'), (snapshot) => {
+        const list: Notification[] = [];
+        snapshot.forEach(doc => {
+          list.push(doc.data() as Notification);
+        });
+        setNotifications(list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'notifications');
+      });
+
+      const unsubActivities = onSnapshot(collection(db, 'activities'), (snapshot) => {
+        const list: TeamActivity[] = [];
+        snapshot.forEach(doc => {
+          list.push(doc.data() as TeamActivity);
+        });
+        setActivities(list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'activities');
+      });
+
+      const unsubLabels = onSnapshot(collection(db, 'labels'), (snapshot) => {
+        const list: Label[] = [];
+        snapshot.forEach(doc => {
+          list.push(doc.data() as Label);
+        });
+        if (list.length > 0) {
+          setLabels(list);
+        }
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'labels');
+      });
+
+      const unsubMessages = onSnapshot(collection(db, 'messages'), (snapshot) => {
+        const list: Message[] = [];
+        snapshot.forEach(doc => {
+          list.push(doc.data() as Message);
+        });
+        setMessages(list);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'messages');
+      });
+
+      const unsubConversations = onSnapshot(collection(db, 'teamConversations'), (snapshot) => {
+        const list: TeamConversation[] = [];
+        snapshot.forEach(doc => {
+          list.push(doc.data() as TeamConversation);
+        });
+        if (list.length > 0) {
+          setTeamConversations(list);
+        }
+      }, (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'teamConversations');
+      });
+
+      // Single-document settings
+      const unsubVisualSettings = onSnapshot(doc(db, 'visualSettings', 'default'), (snapshot) => {
+        if (snapshot.exists()) {
+          setVisualSettings(snapshot.data() as VisualSettings);
+        }
+      }, (error) => {
+        handleFirestoreError(error, OperationType.GET, 'visualSettings/default');
+      });
+
+      const unsubReportTemplateSettings = onSnapshot(doc(db, 'reportTemplateSettings', 'default'), (snapshot) => {
+        if (snapshot.exists()) {
+          setReportTemplateSettings(snapshot.data() as ReportTemplateSettings);
+        }
+      }, (error) => {
+        handleFirestoreError(error, OperationType.GET, 'reportTemplateSettings/default');
+      });
+
+      const unsubFlowPermissions = onSnapshot(doc(db, 'flowPermissions', 'default'), (snapshot) => {
+        if (snapshot.exists()) {
+          setFlowPermissions(snapshot.data() as FlowPermissions);
+        }
+      }, (error) => {
+        handleFirestoreError(error, OperationType.GET, 'flowPermissions/default');
+      });
+
+      return () => {
+        unsubUsers();
+        unsubProjects();
+        unsubStages();
+        unsubTasks();
+        unsubComments();
+        unsubNotifications();
+        unsubActivities();
+        unsubLabels();
+        unsubMessages();
+        unsubConversations();
+        unsubVisualSettings();
+        unsubReportTemplateSettings();
+        unsubFlowPermissions();
+      };
+    };
+
+    let cleanupPromise = initAndSubscribe();
+
+    return () => {
+      active = false;
+      cleanupPromise.then(cleanup => {
+        if (cleanup) cleanup();
+      });
+    };
+  }, []);
 
   // --- Sync storage changes ---
   useEffect(() => {
@@ -789,6 +1015,7 @@ export default function App() {
     };
     
     setTasks(prev => [newTask, ...prev]);
+    dbSaveTask(newTask);
 
     // Generate broadcast notification
     const proj = projects.find(p => p.id === newTask.projectId);
@@ -817,6 +1044,7 @@ export default function App() {
     }
     
     setNotifications(prev => [...newNotifications, ...prev]);
+    newNotifications.forEach(n => dbSaveNotification(n));
     
     addActivity({
       type: 'task_created',
@@ -846,6 +1074,12 @@ export default function App() {
       setComments(previousCommentsState);
       setActivities(previousActivitiesState);
       setNotifications(previousNotificationsState);
+      
+      const origTask = previousTasksState.find(t => t.id === taskId);
+      if (origTask) {
+        dbSaveTask(origTask);
+      }
+      
       triggerToast('Task move reverted successfully.', 'info');
     };
 
@@ -885,6 +1119,8 @@ export default function App() {
         stageId: targetStageId,
         updatedAt: new Date().toISOString()
       };
+      
+      dbSaveTask(updatedDraggedTask);
 
       if (!targetTaskId) {
         // Appending to the end of the column: find other tasks of the same stage and project
@@ -924,6 +1160,7 @@ export default function App() {
         createdAt: new Date().toISOString()
       };
       setNotifications(prev => [newNotif, ...prev]);
+      dbSaveNotification(newNotif);
       triggerToast(`Moved to ${targetStage?.name || targetStageId}`, 'success', undoAction);
     } else {
       triggerToast('Task sequence reordered', 'success', undoAction);
@@ -932,11 +1169,19 @@ export default function App() {
 
   const handleUpdateTaskDetails = (updatedTask: Task) => {
     setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+    dbSaveTask(updatedTask);
     triggerToast('Task details modified successfully.');
   };
 
   const handleBulkUpdateTasks = (taskIds: string[], updates: Partial<Task>) => {
-    setTasks(prev => prev.map(t => taskIds.includes(t.id) ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t));
+    setTasks(prev => prev.map(t => {
+      if (taskIds.includes(t.id)) {
+        const updated = { ...t, ...updates, updatedAt: new Date().toISOString() };
+        dbSaveTask(updated);
+        return updated;
+      }
+      return t;
+    }));
     
     // Check for auto-comments in bulk move
     if (updates.stageId) {
@@ -958,18 +1203,28 @@ export default function App() {
   };
 
   const handleBulkArchiveTasks = (taskIds: string[]) => {
-    setTasks(prev => prev.map(t => taskIds.includes(t.id) ? { ...t, archived: true, updatedAt: new Date().toISOString() } : t));
+    setTasks(prev => prev.map(t => {
+      if (taskIds.includes(t.id)) {
+        const updated = { ...t, archived: true, updatedAt: new Date().toISOString() };
+        dbSaveTask(updated);
+        return updated;
+      }
+      return t;
+    }));
     triggerToast(`Archived ${taskIds.length} tasks.`);
   };
 
   const handleUpdateLabels = (updatedLabels: Label[]) => {
     setLabels(updatedLabels);
+    updatedLabels.forEach(l => dbSaveLabel(l));
     // Relational cleanup for deleted labels on all tasks
     setTasks(prev => prev.map(t => {
       if (!t.labelIds) return t;
       const filtered = t.labelIds.filter(id => updatedLabels.some(l => l.id === id));
       if (filtered.length !== t.labelIds.length) {
-        return { ...t, labelIds: filtered, updatedAt: new Date().toISOString() };
+        const updated = { ...t, labelIds: filtered, updatedAt: new Date().toISOString() };
+        dbSaveTask(updated);
+        return updated;
       }
       return t;
     }));
@@ -986,7 +1241,14 @@ export default function App() {
       return;
     }
 
-    setTasks(prev => prev.map(t => completedTaskIds.includes(t.id) ? { ...t, archived: true, updatedAt: new Date().toISOString() } : t));
+    setTasks(prev => prev.map(t => {
+      if (completedTaskIds.includes(t.id)) {
+        const updated = { ...t, archived: true, updatedAt: new Date().toISOString() };
+        dbSaveTask(updated);
+        return updated;
+      }
+      return t;
+    }));
     triggerToast(`Archived ${completedTaskIds.length} completed task(s)`);
 
     // Generate broadcast notification
@@ -1001,6 +1263,7 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
     setNotifications(prev => [newNotif, ...prev]);
+    dbSaveNotification(newNotif);
   };
 
   // --- Comment Logs ---
@@ -1015,6 +1278,7 @@ export default function App() {
     };
 
     setComments(prev => [...prev, newComment]);
+    dbSaveComment(newComment);
 
     const task = tasks.find(t => t.id === taskId);
     const proj = projects.find(p => p.id === task?.projectId);
@@ -1044,12 +1308,14 @@ export default function App() {
         createdAt: new Date().toISOString()
       };
       setNotifications(prev => [newNotif, ...prev]);
+      dbSaveNotification(newNotif);
     }
     triggerToast('Comment posted onto task timeline.');
   };
 
   const handleDeleteComment = (commentId: string) => {
     setComments(prev => prev.filter(c => c.id !== commentId));
+    dbDeleteComment(commentId);
     triggerToast('Comment removed.', 'info');
   };
 
@@ -1062,6 +1328,7 @@ export default function App() {
     };
     setProjects(prev => [...prev, newProj]);
     setSelectedProjectId(newProj.id); // auto switch focusing inside
+    dbSaveProject(newProj);
 
     const newNotif: Notification = {
       id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
@@ -1073,6 +1340,7 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
     setNotifications(prev => [newNotif, ...prev]);
+    dbSaveNotification(newNotif);
 
     addActivity({
       type: 'project_update',
@@ -1088,6 +1356,7 @@ export default function App() {
 
   const handleUpdateProject = (updatedProj: Project) => {
     setProjects(prev => prev.map(p => p.id === updatedProj.id ? updatedProj : p));
+    dbSaveProject(updatedProj);
     
     // Add real-time notification
     const newNotif: Notification = {
@@ -1100,6 +1369,7 @@ export default function App() {
       createdAt: new Date().toISOString()
     };
     setNotifications(prev => [newNotif, ...prev]);
+    dbSaveNotification(newNotif);
 
     // Log Activity
     addActivity({
@@ -1117,7 +1387,14 @@ export default function App() {
   };
 
   const handleUpdateUserRole = (userId: string, newRole: UserRole) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+    setUsers(prev => prev.map(u => {
+      if (u.id === userId) {
+        const updated = { ...u, role: newRole };
+        dbSaveUser(updated);
+        return updated;
+      }
+      return u;
+    }));
     
     // Auto sync current user if session user roles changed
     if (userId === currentUser.id) {
@@ -1127,7 +1404,14 @@ export default function App() {
   };
 
   const handleUpdateUserDiscipline = (userId: string, newDiscipline: TaskType) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, discipline: newDiscipline } : u));
+    setUsers(prev => prev.map(u => {
+      if (u.id === userId) {
+        const updated = { ...u, discipline: newDiscipline };
+        dbSaveUser(updated);
+        return updated;
+      }
+      return u;
+    }));
     
     // Auto sync current user if session user discipline changed
     if (userId === currentUser.id) {
@@ -1138,6 +1422,7 @@ export default function App() {
 
   const handleUpdateUser = (updatedUser: User) => {
     setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    dbSaveUser(updatedUser);
     
     // Auto sync current user if session user details changed
     if (updatedUser.id === currentUser.id) {
@@ -1155,6 +1440,7 @@ export default function App() {
     if (targetUser) {
       if (confirm(`Are you sure you want to permanently delete user "${targetUser.name}"?`)) {
         setUsers(prev => prev.filter(u => u.id !== userId));
+        dbDeleteUser(userId);
         triggerToast(`Permanently deleted "${targetUser.name}" from roster.`, 'info');
       }
     }
@@ -1169,7 +1455,9 @@ export default function App() {
       if (u.id === userId) {
         const nextDeactivated = !u.deactivated;
         triggerToast(`${u.name} has been ${nextDeactivated ? 'DEACTIVATED' : 'REACTIVATED'}`, 'info');
-        return { ...u, deactivated: nextDeactivated };
+        const updated = { ...u, deactivated: nextDeactivated };
+        dbSaveUser(updated);
+        return updated;
       }
       return u;
     }));
@@ -1184,20 +1472,30 @@ export default function App() {
       password: masterPassword
     };
     setUsers(prev => [...prev, createdUser]);
+    dbSaveUser(createdUser);
     triggerToast(`${newUser.name} registered in corporate team list.`);
   };
 
   const handleUpdateStages = (updatedStages: WorkflowStage[]) => {
     setStages(updatedStages);
+    updatedStages.forEach(s => dbSaveStage(s));
     triggerToast('Kanban workflow stages updated successfully.');
   };
 
   // --- Notification Center helpers ---
   const handleMarkNotificationAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    setNotifications(prev => prev.map(n => {
+      if (n.id === id) {
+        const updated = { ...n, read: true };
+        dbSaveNotification(updated);
+        return updated;
+      }
+      return n;
+    }));
   };
 
   const handleClearNotifications = () => {
+    notifications.forEach(n => dbDeleteNotification(n.id));
     setNotifications([]);
     triggerToast('Logs history flushed.', 'info');
   };
@@ -1285,6 +1583,7 @@ export default function App() {
   // --- Dynamic flow updating and delete handlers ---
   const handleUpdateFlowPermissions = (newPermissions: FlowPermissions) => {
     setFlowPermissions(newPermissions);
+    dbSaveFlowPermissions(newPermissions);
     triggerToast('Permission flow settings synchronized.', 'success');
   };
 
@@ -1295,6 +1594,7 @@ export default function App() {
     }
     if (confirm('Are you sure you want to permanently delete this task?')) {
       setTasks(prev => prev.filter(t => t.id !== taskId));
+      dbDeleteTask(taskId);
       triggerToast('Task permanently deleted.', 'info');
       setSelectedTaskId(null);
     }
@@ -1309,7 +1609,9 @@ export default function App() {
       if (t.id === taskId) {
         const nextArchived = !t.archived;
         triggerToast(nextArchived ? 'Task archived successfully.' : 'Task restored to board.', 'success');
-        return { ...t, archived: nextArchived, updatedAt: new Date().toISOString() };
+        const updated = { ...t, archived: nextArchived, updatedAt: new Date().toISOString() };
+        dbSaveTask(updated);
+        return updated;
       }
       return t;
     }));
@@ -1322,7 +1624,12 @@ export default function App() {
     }
     if (confirm('Are you sure you want to permanently delete this project and all its associated tasks?')) {
       setProjects(prev => prev.filter(p => p.id !== projectId));
-      setTasks(prev => prev.filter(t => t.projectId !== projectId));
+      setTasks(prev => {
+        const remaining = prev.filter(t => t.projectId !== projectId);
+        prev.filter(t => t.projectId === projectId).forEach(t => dbDeleteTask(t.id));
+        return remaining;
+      });
+      dbDeleteProject(projectId);
       triggerToast('Project and tasks permanently deleted.', 'info');
     }
   };
@@ -1336,7 +1643,9 @@ export default function App() {
       if (p.id === projectId) {
         const nextArchived = !p.archived;
         triggerToast(nextArchived ? 'Project archived successfully.' : 'Project restored to active list.', 'success');
-        return { ...p, archived: nextArchived };
+        const updated = { ...p, archived: nextArchived };
+        dbSaveProject(updated);
+        return updated;
       }
       return p;
     }));

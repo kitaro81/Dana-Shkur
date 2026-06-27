@@ -1,0 +1,298 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A workspace member account definition",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "password": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "lead_designer", "engineer", "viewer"] },
+        "avatarUrl": { "type": "string" },
+        "joinedAt": { "type": "string" },
+        "discipline": { "type": "string", "enum": ["architecture", "structure", "electric", "mechanical", "other"] },
+        "deactivated": { "type": "boolean" },
+        "phoneNumber": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "role", "joinedAt"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "A design project containing tasks",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "description": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string", "enum": ["planning", "active", "review", "completed"] },
+        "createdAt": { "type": "string" },
+        "archived": { "type": "boolean" },
+        "disciplines": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "assignedUserIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["id", "name", "code", "description", "status", "createdAt"]
+    },
+    "WorkflowStage": {
+      "title": "WorkflowStage",
+      "description": "A column stage in the Kanban workflow board",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "color": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["id", "name", "color", "order"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "A design or task item within a project",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["architecture", "structure", "electric", "mechanical", "other"] },
+        "stageId": { "type": "string" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "assignedTo": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "archived": { "type": "boolean" },
+        "labelIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "quickNote": { "type": "string" },
+        "assignedUserIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "disciplines": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "storyPoints": { "type": "number" },
+        "tShirtSize": { "type": "string", "enum": ["S", "M", "L", "XL"] }
+      },
+      "required": ["id", "projectId", "title", "description", "type", "stageId", "priority", "dueDate", "createdAt", "updatedAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "A discussion comment attached to a task",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "taskId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "taskId", "userId", "userName", "text", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A target or system wide alert notification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "success", "alert"] },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "title", "message", "type", "read", "createdAt"]
+    },
+    "TeamActivity": {
+      "title": "TeamActivity",
+      "description": "An audit log record of a team action",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userAvatar": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "projectId": { "type": "string" },
+        "projectName": { "type": "string" },
+        "taskId": { "type": "string" },
+        "taskTitle": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "type", "userId", "userName", "title", "createdAt"]
+    },
+    "Label": {
+      "title": "Label",
+      "description": "A visual category label tag",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "color": { "type": "string" }
+      },
+      "required": ["id", "name", "color"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A direct chat message between two users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "senderId", "receiverId", "text", "createdAt", "read"]
+    },
+    "TeamConversation": {
+      "title": "TeamConversation",
+      "description": "A group message channel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["id", "name", "createdAt", "createdBy"]
+    },
+    "VisualSettings": {
+      "title": "VisualSettings",
+      "description": "Global user interface configurations",
+      "type": "object",
+      "properties": {
+        "showCalendarTab": { "type": "boolean" },
+        "showReportsTab": { "type": "boolean" },
+        "showArchiveTab": { "type": "boolean" },
+        "showTaskPriorityBadge": { "type": "boolean" },
+        "showOverdueHighlight": { "type": "boolean" },
+        "showTaskTypeIcon": { "type": "boolean" },
+        "enlargeIconSize": { "type": "boolean" },
+        "welcomeModalEnabled": { "type": "boolean" },
+        "welcomeModalTitle": { "type": "string" },
+        "welcomeModalContent": { "type": "string" },
+        "welcomeModalButtonText": { "type": "string" },
+        "activeMethodology": { "type": "string" },
+        "workspaceName": { "type": "string" },
+        "primaryColor": { "type": "string" },
+        "cardCompactness": { "type": "string" },
+        "agileSprintDurationWeeks": { "type": "number" },
+        "agileSprintGoal": { "type": "string" },
+        "agileEstimationMetric": { "type": "string" },
+        "agileTargetCapacity": { "type": "number" },
+        "agileRequireStoryPoints": { "type": "boolean" },
+        "agileEnforceSprintAssignment": { "type": "boolean" },
+        "masterPassword": { "type": "string" },
+        "autoArchiveApprovedTasks": { "type": "boolean" },
+        "compactMode": { "type": "boolean" },
+        "footerText": { "type": "string" }
+      },
+      "required": ["showCalendarTab", "showReportsTab", "showArchiveTab"]
+    },
+    "ReportTemplateSettings": {
+      "title": "ReportTemplateSettings",
+      "description": "Global custom report template settings",
+      "type": "object",
+      "properties": {
+        "reportTitle": { "type": "string" },
+        "companyName": { "type": "string" },
+        "accentColor": { "type": "string" },
+        "includeStatCards": { "type": "boolean" },
+        "includeDisciplineBreakdown": { "type": "boolean" },
+        "includeTaskDescription": { "type": "boolean" },
+        "includeComments": { "type": "boolean" },
+        "footerText": { "type": "string" }
+      },
+      "required": ["reportTitle", "companyName", "accentColor"]
+    },
+    "FlowPermissions": {
+      "title": "FlowPermissions",
+      "description": "Role-based matrix discipline restrictions",
+      "type": "object",
+      "properties": {
+        "visibility": { "type": "object" },
+        "commenting": { "type": "object" },
+        "exporting": { "type": "object" }
+      },
+      "required": ["visibility", "commenting", "exporting"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Roster of workspace users"
+    },
+    "projects": {
+      "schema": { "$ref": "#/entities/Project" },
+      "description": "Design projects in the workspace"
+    },
+    "stages": {
+      "schema": { "$ref": "#/entities/WorkflowStage" },
+      "description": "Kanban columns definition"
+    },
+    "tasks": {
+      "schema": { "$ref": "#/entities/Task" },
+      "description": "All design tasks"
+    },
+    "comments": {
+      "schema": { "$ref": "#/entities/Comment" },
+      "description": "Comments left on tasks"
+    },
+    "notifications": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "System or personal alerts"
+    },
+    "activities": {
+      "schema": { "$ref": "#/entities/TeamActivity" },
+      "description": "Audit trail history log"
+    },
+    "labels": {
+      "schema": { "$ref": "#/entities/Label" },
+      "description": "Customizable label tags"
+    },
+    "messages": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Direct message chat history"
+    },
+    "teamConversations": {
+      "schema": { "$ref": "#/entities/TeamConversation" },
+      "description": "Group channels definition"
+    },
+    "visualSettings": {
+      "schema": { "$ref": "#/entities/VisualSettings" },
+      "description": "Global visual/admin workspace parameters"
+    },
+    "reportTemplateSettings": {
+      "schema": { "$ref": "#/entities/ReportTemplateSettings" },
+      "description": "Workspace custom report configs"
+    },
+    "flowPermissions": {
+      "schema": { "$ref": "#/entities/FlowPermissions" },
+      "description": "Role and discipline permissions matrix"
+    }
+  }
+}
