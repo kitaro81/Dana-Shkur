@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Project, User, WorkflowStage, UserRole, TaskType, VisualSettings, ReportTemplateSettings, Label, Task, TeamActivity } from '../types';
-import { Shield, Plus, Briefcase, PlusCircle, Trash, RefreshCw, Layers, Edit2, Users, Check, X, Sliders, Settings, FileText, Clock, Tag, Megaphone, Palette, AlertTriangle, Zap, Kanban, MessageSquare, Download } from 'lucide-react';
+import { Shield, Plus, Briefcase, PlusCircle, Trash, RefreshCw, Layers, Edit2, Users, Check, X, Sliders, Settings, FileText, Clock, Tag, Megaphone, Palette, AlertTriangle, Zap, Kanban, MessageSquare, Download, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface AdminDashboardProps {
@@ -14,6 +14,7 @@ interface AdminDashboardProps {
   onUpdateReportTemplateSettings: (settings: ReportTemplateSettings) => void;
   labels: Label[];
   onAddProject: (project: Omit<Project, 'id' | 'createdAt'>) => void;
+  onUpdateProject?: (project: Project) => void;
   onUpdateUserRole: (userId: string, newRole: UserRole) => void;
   onUpdateUserDiscipline: (userId: string, newDiscipline: TaskType) => void;
   onDeleteUser?: (userId: string) => void;
@@ -39,6 +40,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onUpdateReportTemplateSettings,
   labels,
   onAddProject,
+  onUpdateProject,
   onUpdateUserRole,
   onUpdateUserDiscipline,
   onDeleteUser,
@@ -115,6 +117,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [newProjLoc, setNewProjLoc] = useState('');
   const [newProjDisciplines, setNewProjDisciplines] = useState<TaskType[]>([]);
   const [newProjAssignedUserIds, setNewProjAssignedUserIds] = useState<string[]>([]);
+
+  // --- Project editing state ---
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [editProjName, setEditProjName] = useState('');
+  const [editProjCode, setEditProjCode] = useState('');
+  const [editProjDesc, setEditProjDesc] = useState('');
+  const [editProjLoc, setEditProjLoc] = useState('');
+  const [editProjStatus, setEditProjStatus] = useState<'planning' | 'active' | 'review' | 'completed'>('planning');
+  const [editProjDisciplines, setEditProjDisciplines] = useState<TaskType[]>([]);
+  const [editProjAssignedUserIds, setEditProjAssignedUserIds] = useState<string[]>([]);
+
+  const handleStartEditProject = (proj: Project) => {
+    setEditingProject(proj);
+    setEditProjName(proj.name);
+    setEditProjCode(proj.code);
+    setEditProjDesc(proj.description);
+    setEditProjLoc(proj.location || '');
+    setEditProjStatus(proj.status);
+    setEditProjDisciplines(proj.disciplines || []);
+    setEditProjAssignedUserIds(proj.assignedUserIds || []);
+  };
+
+  const handleSaveEditProject = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProject) return;
+    if (!editProjName.trim() || !editProjCode.trim()) return;
+
+    if (onUpdateProject) {
+      onUpdateProject({
+        ...editingProject,
+        name: editProjName.trim(),
+        code: editProjCode.toUpperCase().replace(/\s+/g, '-'),
+        description: editProjDesc.trim(),
+        location: editProjLoc.trim() || undefined,
+        status: editProjStatus,
+        disciplines: editProjDisciplines,
+        assignedUserIds: editProjAssignedUserIds,
+      });
+    }
+
+    setEditingProject(null);
+    alert('Project details and team assignments updated successfully.');
+  };
   
   // --- Bulk Message State ---
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
@@ -150,6 +195,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // --- Invite User state ---
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserPhone, setNewUserPhone] = useState('');
   const [newUserRole, setNewUserRole] = useState<UserRole>('engineer');
   const [newUserDiscipline, setNewUserDiscipline] = useState<TaskType>('other');
 
@@ -194,10 +240,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       role: newUserRole,
       avatarUrl: `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 900000)}?auto=format&fit=crop&q=80&w=120`,
       discipline: newUserDiscipline,
+      phoneNumber: newUserPhone.trim() || undefined,
     });
 
     setNewUserName('');
     setNewUserEmail('');
+    setNewUserPhone('');
     setNewUserRole('engineer');
     setNewUserDiscipline('other');
     alert('Team member registered in team credentials list!');
@@ -659,6 +707,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Phone Number</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. +1 (555) 019-2834"
+                    className="w-full text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
+                    value={newUserPhone}
+                    onChange={(e) => setNewUserPhone(e.target.value)}
+                  />
+                </div>
+
+                <div>
                   <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 font-mono">Assigned Discipline Role</label>
                   <select
                     className="w-full text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
@@ -755,6 +814,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           )}
                         </div>
                         <p className="text-[10px] font-mono text-slate-400">{u.email}</p>
+                        {u.phoneNumber && (
+                          <p className="text-[10px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
+                            <Phone className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                            <span>{u.phoneNumber}</span>
+                          </p>
+                        )}
                         {u.discipline && (
                           <span className={`text-[9.5px] uppercase tracking-wide px-1.5 py-0.2 rounded font-semibold border inline-block mt-1 ${
                             u.discipline === 'architecture' ? 'bg-red-50 text-red-600 border-red-100' :
@@ -1006,6 +1071,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <span className="text-[9px] font-mono tracking-wider font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 rounded px-1.5 py-0.5 uppercase">
                         STATE: {p.status}
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => handleStartEditProject(p)}
+                        className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors cursor-pointer border border-transparent hover:border-indigo-100"
+                        title="Edit Project & Team"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
                       {onDeleteProject && (
                         <button
                           type="button"
@@ -1024,6 +1097,39 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </div>
                       <p className="text-[10px] text-slate-400 mt-0.5 font-mono">Location: {p.location || 'N/A'} | Provisioned {p.createdAt}</p>
                       <p className="text-[11px] text-slate-600 line-clamp-3 mt-1.5 leading-relaxed">{p.description}</p>
+
+                      {/* Project Disciplines */}
+                      {p.disciplines && p.disciplines.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {p.disciplines.map(disc => (
+                            <span key={disc} className="text-[8.5px] uppercase tracking-wide px-1.5 py-0.5 rounded font-extrabold border bg-slate-50 text-slate-500 border-slate-100">
+                              {disc}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Project Team Members */}
+                      {p.assignedUserIds && p.assignedUserIds.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1 mt-2.5 pt-2 border-t border-slate-100">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase mr-1">Team:</span>
+                          <div className="flex -space-x-1.5 overflow-hidden">
+                            {p.assignedUserIds.map(userId => {
+                              const u = users.find(user => user.id === userId);
+                              if (!u) return null;
+                              return (
+                                <img
+                                  key={userId}
+                                  className="inline-block h-5 w-5 rounded-full ring-2 ring-white object-cover"
+                                  src={u.avatarUrl || `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 900000)}?auto=format&fit=crop&q=80&w=120`}
+                                  alt={u.name}
+                                  title={`${u.name} (${u.role})`}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1165,6 +1271,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       Enlarge Icon Sizes
                     </label>
                     <p className="text-[10px] text-slate-400 pl-5">Increase the physical scaling/size of Lucide icons across panels for accessibility.</p>
+                  </div>
+                </div>
+
+                {/* 9. compactMode */}
+                <div className="flex items-start justify-between gap-4 p-3 hover:bg-slate-50/50 rounded-lg border border-transparent hover:border-slate-100 transition-all">
+                  <div className="space-y-0.5">
+                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!!visualSettings.compactMode}
+                        onChange={(e) => onUpdateVisualSettings({ ...visualSettings, compactMode: e.target.checked })}
+                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      Enable Compact Layout Mode
+                    </label>
+                    <p className="text-[10px] text-slate-400 pl-5">Switch global workspace display to a tighter, higher-density compact layout (reduces card sizes, paddings, and margins) instead of spacious layout.</p>
+                  </div>
+                </div>
+
+                {/* 10. autoArchiveApprovedTasks */}
+                <div className="flex items-start justify-between gap-4 p-3 hover:bg-slate-50/50 rounded-lg border border-transparent hover:border-slate-100 transition-all">
+                  <div className="space-y-0.5">
+                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!!visualSettings.autoArchiveApprovedTasks}
+                        onChange={(e) => onUpdateVisualSettings({ ...visualSettings, autoArchiveApprovedTasks: e.target.checked })}
+                        className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      Auto-Archive Approved Tasks (30+ Days)
+                    </label>
+                    <p className="text-[10px] text-slate-400 pl-5">Automatically archive tasks that have remained in the 'Approved' stage for more than 30 days to keep the board clean.</p>
                   </div>
                 </div>
               </div>
@@ -1621,6 +1759,182 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   Yes, Overwrite & Apply
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Project Modal */}
+      <AnimatePresence>
+        {editingProject && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setEditingProject(null)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200"
+            >
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                    <Briefcase className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">Edit Project Details</h3>
+                    <p className="text-[10px] text-slate-500 font-mono tracking-wider">PROJECT: {editingProject.code}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingProject(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEditProject} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-left">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Project Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Skyline Skyscraper Phase II"
+                    className="w-full text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
+                    value={editProjName}
+                    onChange={(e) => setEditProjName(e.target.value)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Project Identifier Code</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. PRJ-SKY-02"
+                      className="w-full text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
+                      value={editProjCode}
+                      onChange={(e) => setEditProjCode(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-550 uppercase mb-1">Physical Location</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. San Francisco"
+                      className="w-full text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
+                      value={editProjLoc}
+                      onChange={(e) => setEditProjLoc(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Delivery Status</label>
+                    <select
+                      className="w-full text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
+                      value={editProjStatus}
+                      onChange={(e) => setEditProjStatus(e.target.value as any)}
+                    >
+                      <option value="planning">Planning</option>
+                      <option value="active">Active</option>
+                      <option value="review">Review</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Engineering Summary / Details (Add Detail)</label>
+                  <textarea
+                    required
+                    placeholder="Provide a general description..."
+                    rows={4}
+                    className="w-full text-xs px-3 py-2 border border-slate-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
+                    value={editProjDesc}
+                    onChange={(e) => setEditProjDesc(e.target.value)}
+                  />
+                </div>
+
+                {/* Project Disciplines select checklists */}
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Target Disciplines (Select Multiple)</label>
+                  <div className="flex flex-wrap gap-3 p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                    {(['architecture', 'structure', 'electric', 'mechanical', 'other'] as TaskType[]).map(disc => {
+                      const isChecked = editProjDisciplines.includes(disc);
+                      return (
+                        <label key={disc} className="flex items-center gap-1.5 text-xs text-slate-700 font-medium cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              setEditProjDisciplines(prev => 
+                                prev.includes(disc) 
+                                  ? prev.filter(d => d !== disc) 
+                                  : [...prev, disc]
+                              );
+                            }}
+                            className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
+                          />
+                          <span className="capitalize">{disc}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Project Assignees select checklists */}
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Assigned Team Members (Add Team)</label>
+                  <div className="grid grid-cols-2 gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg max-h-[140px] overflow-y-auto">
+                    {users.filter(u => !u.deactivated).map(u => {
+                      const isChecked = editProjAssignedUserIds.includes(u.id);
+                      return (
+                        <label key={u.id} className="flex items-center gap-1.5 p-1 hover:bg-slate-100 rounded transition-colors text-[11px] text-slate-700 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              setEditProjAssignedUserIds(prev => 
+                                prev.includes(u.id) 
+                                  ? prev.filter(id => id !== u.id) 
+                                  : [...prev, u.id]
+                              );
+                            }}
+                            className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
+                          />
+                          <span className="truncate" title={u.name}>{u.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-150">
+                  <button
+                    type="button"
+                    onClick={() => setEditingProject(null)}
+                    className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer uppercase tracking-wider"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-lg shadow-indigo-100 transition-all cursor-pointer uppercase tracking-wider flex items-center gap-2"
+                  >
+                    Save Project
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

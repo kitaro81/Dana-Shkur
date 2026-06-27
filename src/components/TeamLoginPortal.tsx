@@ -15,6 +15,7 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
   const [challengingUser, setChallengingUser] = useState<User | null>(null);
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showForgotHelp, setShowForgotHelp] = useState(false);
   const Chevron = ChevronRight;
 
   const activeUsers = users.filter(u => !u.deactivated);
@@ -154,6 +155,7 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
                         setChallengingUser(user);
                         setPassword('');
                         setError(null);
+                        setShowForgotHelp(false);
                       }}
                       className="group bg-white border border-slate-200 hover:border-indigo-400 rounded-2xl p-5 cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5 flex flex-col justify-between gap-4"
                     >
@@ -311,6 +313,40 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
                           {error}
                         </motion.div>
                       )}
+                      
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setShowForgotHelp(!showForgotHelp)}
+                          className="text-[10px] text-indigo-600 hover:text-indigo-800 font-semibold underline cursor-pointer focus:outline-none mt-1"
+                        >
+                          {showForgotHelp ? "Hide instructions" : "Forgot your password?"}
+                        </button>
+                      </div>
+
+                      <AnimatePresence>
+                        {showForgotHelp && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden mt-2"
+                          >
+                            <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl text-[11px] text-slate-600 leading-relaxed space-y-1">
+                              <p className="font-bold text-indigo-800 flex items-center gap-1">
+                                <AlertCircle className="w-3.5 h-3.5" />
+                                Admin Reset Instructions
+                              </p>
+                              <p>
+                                If you cannot recall your password, please contact an **Administrator** (e.g., Dana H.).
+                              </p>
+                              <p>
+                                Administrators can reset your access password to the **team master key** via the Member list inside the **Admin Dashboard** section.
+                              </p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
 
                     <div className="flex gap-3 pt-2">

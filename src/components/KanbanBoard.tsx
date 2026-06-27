@@ -11,6 +11,7 @@ interface KanbanBoardProps {
   currentUser: User;
   labels: Label[];
   visualSettings?: VisualSettings;
+  projects?: Project[];
   onAddTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'loggedHours'>) => void;
   onUpdateTaskStage: (taskId: string, targetStageId: string, targetTaskId?: string, isAfter?: boolean) => void;
   onSelectTask: (taskId: string) => void;
@@ -32,6 +33,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   currentUser,
   labels,
   visualSettings,
+  projects,
   onAddTask,
   onUpdateTaskStage,
   onSelectTask,
@@ -121,6 +123,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const [sortBy, setSortBy] = useState<'custom' | 'priority' | 'date' | 'effort'>('custom');
   const [newStoryPoints, setNewStoryPoints] = useState<number>(3);
   const [newTShirtSize, setNewTShirtSize] = useState<'S' | 'M' | 'L' | 'XL'>('M');
+  const [newSelectedProjectId, setNewSelectedProjectId] = useState<string>(project?.id === 'all' ? (projects && projects[0]?.id || '') : (project?.id || ''));
+
+  useEffect(() => {
+    if (project?.id && project.id !== 'all') {
+      setNewSelectedProjectId(project.id);
+    } else if (project?.id === 'all' && projects && projects.length > 0) {
+      setNewSelectedProjectId(projects[0].id);
+    }
+  }, [project, projects]);
 
   // Multiple select states for multi assignee/disciplines
   const [newAssignedUserIds, setNewAssignedUserIds] = useState<string[]>([]);
@@ -164,7 +175,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }
 
   // Filter tasks belonging only to the current active project, search title, and selected design discipline 
-  const projectTasks = tasks.filter(t => t.projectId === project.id && !t.archived);
+  const projectTasks = tasks.filter(t => (project.id === 'all' || t.projectId === project.id) && !t.archived);
   const filteredTasks = projectTasks.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           task.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -309,7 +320,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       : (newAssignedUserIds.length > 0 ? newAssignedUserIds : (newAssignedTo ? [newAssignedTo] : []));
 
     onAddTask({
-      projectId: project.id,
+      projectId: project.id === 'all' ? (newSelectedProjectId || (projects && projects[0]?.id) || 'all') : project.id,
       title: newTitle.trim(),
       description: newDesc.trim(),
       type: disciplinesToSubmit[0] || 'other',
@@ -402,27 +413,25 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           <div className="p-1 bg-white rounded-lg border border-slate-200/60 flex items-center gap-1 shadow-3xs">
             <button
               onClick={() => setBoardViewMode('pipeline')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              className={`group flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                 boardViewMode === 'pipeline'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-850 hover:bg-slate-50'
               }`}
-              title="Pipeline View"
             >
-              <Layers className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Pipeline View</span>
+              <Layers className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="hidden sm:inline group-hover:inline group-focus:inline group-active:inline whitespace-nowrap">Pipeline View</span>
             </button>
             <button
               onClick={() => setBoardViewMode('methodology')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              className={`group flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                 boardViewMode === 'methodology'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-850 hover:bg-slate-50'
               }`}
-              title="Methodology & Presets"
             >
-              <Compass className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Methodology & Presets</span>
+              <Compass className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="hidden sm:inline group-hover:inline group-focus:inline group-active:inline whitespace-nowrap">Methodology & Presets</span>
             </button>
           </div>
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono ml-1 hidden md:inline">
@@ -553,39 +562,38 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       {boardViewMode === 'pipeline' ? (
         <>
           {/* Search & Discipline Filter Bar */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-3xs w-full overflow-hidden">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-2.5 sm:p-3 rounded-lg border border-slate-200 shadow-3xs w-full">
         
         {/* Search */}
-        <div className="relative flex-1 max-w-full md:max-w-xs w-full">
+        <div className="relative w-full md:w-[350px] shrink-0 p-2 sm:p-4">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
           <input
             type="text"
             placeholder="Search..."
-            className="w-full text-xs pl-8 pr-3 py-1.5 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-100 focus:border-indigo-400 rounded bg-slate-55/50 hover:bg-slate-50 transition-colors"
+            className="w-full text-xs pl-8 pr-3 py-1.5 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-100 focus:border-indigo-400 rounded bg-slate-50 hover:bg-slate-50 transition-colors"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-1.5 font-sans overflow-x-auto no-scrollbar w-full md:w-auto max-w-full pb-0.5 shrink-0 select-none">
+        <div className="w-full basis-full md:basis-auto md:w-auto max-w-full pb-0.5 shrink-0 select-none">
           {currentUser.role !== 'admin' && currentUser.role !== 'viewer' ? (
-            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded text-amber-800 text-xs font-bold font-mono shadow-3xs select-none">
+            <div className="flex items-center justify-center gap-1.5 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded text-amber-800 text-xs font-bold font-mono shadow-3xs select-none w-full">
               <span>🔒 {currentUser.discipline?.toUpperCase()} VIEW</span>
             </div>
           ) : (
-            <>
+            <div className="flex flex-wrap items-center justify-center gap-1.5 font-sans w-full">
               <button
                 onClick={() => setSelectedDiscipline('all')}
-                className={`px-2.5 py-1 text-xs font-medium rounded border transition-colors cursor-pointer flex items-center gap-1 ${
+                className={`group px-2 py-1.5 text-xs font-medium rounded border transition-colors cursor-pointer flex items-center justify-center gap-1.5 w-auto ${
                   selectedDiscipline === 'all' 
                     ? 'bg-indigo-50 border-indigo-100 text-indigo-700' 
                     : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
                 }`}
-                title="All Disciplines"
               >
                 <span>🌐</span>
-                <span className="hidden sm:inline">All</span>
+                <span className="inline whitespace-nowrap">All</span>
               </button>
 
               {(['architecture', 'structure', 'electric', 'mechanical', 'other'] as TaskType[]).map(disc => {
@@ -602,41 +610,37 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   <button
                     key={disc}
                     onClick={() => setSelectedDiscipline(disc)}
-                    className={`px-2.5 py-1 text-xs font-medium rounded border transition-colors capitalize cursor-pointer flex items-center gap-1 ${
+                    className={`group px-2 py-1.5 text-xs font-medium rounded border transition-colors capitalize cursor-pointer flex items-center justify-center gap-1.5 w-auto ${
                       selectedDiscipline === disc 
                         ? 'bg-indigo-50 border-indigo-100 text-indigo-700' 
                         : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
                     }`}
-                    title={disc}
                   >
                     <span>{getDisciplineIcon(disc)}</span>
-                    <span className="hidden sm:inline">{disc}</span>
+                    <span className="inline whitespace-nowrap">{disc}</span>
                   </button>
                 );
               })}
-            </>
+            </div>
           )}
-
-          <span className="w-px h-4 bg-slate-200 mx-1 inline-block" />
         </div>
 
         {/* Action Buttons Group */}
-        <div className="flex items-center gap-2 flex-wrap md:flex-nowrap flex-shrink-0 w-full md:w-auto justify-start md:justify-end">
+        <div className="flex items-center gap-2 flex-wrap md:flex-nowrap flex-shrink-0 w-full md:w-auto justify-center">
 
           {!isViewer && onArchiveCompletedTasks && (
             <button
               onClick={() => onArchiveCompletedTasks(project.id)}
               disabled={completedTasksCount === 0}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border rounded text-xs font-medium transition-all select-none ${
+              className={`group flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 border rounded text-xs font-medium transition-all select-none ${
                 completedTasksCount === 0
                   ? 'bg-slate-50 border-slate-200 text-slate-350 cursor-not-allowed'
                   : 'bg-emerald-50 hover:bg-emerald-100/80 border-emerald-200 text-emerald-700 font-semibold cursor-pointer shadow-3xs hover:shadow-2xs active:scale-[0.98]'
               }`}
-              title={`Archive completed tasks (${completedTasksCount})`}
             >
-              <Archive className="w-3.5 h-3.5 text-emerald-500" />
-              <span className="hidden sm:inline">Archive Completed ({completedTasksCount})</span>
-              <span className="inline sm:hidden text-[10px] font-bold">{completedTasksCount}</span>
+              <Archive className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+              <span className="hidden sm:inline group-hover:inline group-focus:inline group-active:inline whitespace-nowrap">Archive Completed ({completedTasksCount})</span>
+              <span className="inline sm:hidden group-hover:hidden group-focus:hidden group-active:hidden text-[10px] font-bold">{completedTasksCount}</span>
             </button>
           )}
 
@@ -644,11 +648,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           {!isViewer && (
             <button
               onClick={() => setShowAddForm(true)}
-              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium transition-colors cursor-pointer"
-              title="Add Task"
+              className="group flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium transition-colors cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Add Task</span>
+              <Plus className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="hidden sm:inline group-hover:inline group-focus:inline group-active:inline whitespace-nowrap">Add Task</span>
             </button>
           )}
         </div>
@@ -666,6 +669,21 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             <h3 className="text-xs font-bold text-slate-800 mb-3 pb-1.5 border-b border-slate-200">New Task</h3>
             <form onSubmit={handleAddTaskSubmit} className="space-y-3">
               <div className="grid md:grid-cols-3 gap-3">
+                {project.id === 'all' && projects && (
+                  <div className="md:col-span-3">
+                    <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Target Project</label>
+                    <select
+                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-100 focus:border-indigo-400 bg-white cursor-pointer font-medium text-slate-800"
+                      value={newSelectedProjectId}
+                      onChange={(e) => setNewSelectedProjectId(e.target.value)}
+                      required
+                    >
+                      {projects.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="md:col-span-3">
                   <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Task Title</label>
                   <input
@@ -1054,17 +1072,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                                   <GripVertical className="w-4 h-4 md:w-3.5 md:h-3.5 shrink-0" />
                                 </div>
                               )}
-                              {showDisciplineBadge ? (
-                                <span className={`text-[9px] capitalize px-1.5 py-0.2 rounded font-medium border ${
-                                  task.type === 'architecture' ? 'bg-red-50 text-red-600 border-red-100' :
-                                  task.type === 'structure' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                  task.type === 'electric' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                                  task.type === 'mechanical' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                  'bg-slate-50 text-slate-500 border-slate-100'
-                                }`}>
-                                  {task.type}
-                                </span>
-                              ) : <div />}
                             </div>
 
                             {showPriority && (
@@ -1109,30 +1116,25 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                             </div>
                           )}
 
-                          {/* Quick detail items */}
-                          <div className="flex flex-col gap-0.5 text-[10px] text-slate-400 mb-2">
-                            <div className={`flex items-center gap-1 ${isTaskOverdue ? 'text-rose-500 font-medium' : ''}`}>
-                              <AlertTriangle className={`w-3 h-3 ${isTaskOverdue ? 'text-rose-450 animate-pulse' : 'text-slate-300'}`} />
-                              <span>Due: {task.dueDate}</span>
-                              {(() => {
-                                const metric = visualSettings?.agileEstimationMetric || 'story_points';
-                                if (metric === 't_shirt' && task.tShirtSize) {
-                                  return (
-                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 border border-amber-200 text-amber-700 font-mono ml-auto select-none" title="T-Shirt Size Estimation">
-                                      👕 {task.tShirtSize}
-                                    </span>
-                                  );
-                                } else if (task.storyPoints) {
-                                  return (
-                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 border border-indigo-200 text-indigo-700 font-mono ml-auto select-none" title="Story Points Estimation">
-                                      ⚡ {task.storyPoints} SP
-                                    </span>
-                                  );
-                                }
-                                return null;
-                              })()}
-                            </div>
-                          </div>
+                          {/* Quick detail items (Estimation metrics only) */}
+                          {(() => {
+                            const metric = visualSettings?.agileEstimationMetric || 'story_points';
+                            const hasEstimation = (metric === 't_shirt' && task.tShirtSize) || (metric !== 't_shirt' && task.storyPoints);
+                            if (!hasEstimation) return null;
+                            return (
+                              <div className="flex justify-end text-[10px] text-slate-400 mb-2">
+                                {metric === 't_shirt' && task.tShirtSize ? (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 border border-amber-200 text-amber-700 font-mono select-none" title="T-Shirt Size Estimation">
+                                    👕 {task.tShirtSize}
+                                  </span>
+                                ) : task.storyPoints ? (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 border border-indigo-200 text-indigo-700 font-mono select-none" title="Story Points Estimation">
+                                    ⚡ {task.storyPoints} SP
+                                  </span>
+                                ) : null}
+                              </div>
+                            );
+                          })()}
 
                           {/* Dependency Mapping Blocker Badge */}
                           {task.dependencies && task.dependencies.length > 0 && (() => {
@@ -1254,21 +1256,41 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                               </div>
                             )}
 
-                            {/* Fast move button for quick progression */}
-                            {!isViewer && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const currentIdx = stages.findIndex(s => s.id === task.stageId);
-                                  const nextIdx = (currentIdx + 1) % stages.length;
-                                  onUpdateTaskStage(task.id, stages[nextIdx].id);
-                                }}
-                                className="p-0.5 bg-white border border-slate-150 text-slate-400 rounded hover:bg-slate-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors opacity-0 group-hover:opacity-100"
-                                title="Advance lane"
-                              >
-                                <ArrowRight className="w-3 h-3" />
-                              </button>
-                            )}
+                            {/* Bottom Right Badges & Controls */}
+                            <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                              {showDisciplineBadge && (
+                                <span className={`text-[9px] capitalize px-1.5 py-0.2 rounded font-medium border ${
+                                  task.type === 'architecture' ? 'bg-red-50 text-red-600 border-red-100' :
+                                  task.type === 'structure' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                  task.type === 'electric' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                  task.type === 'mechanical' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                  'bg-slate-50 text-slate-500 border-slate-100'
+                                }`}>
+                                  {task.type}
+                                </span>
+                              )}
+
+                              <div className={`flex items-center gap-0.5 text-[9px] ${isTaskOverdue ? 'text-rose-500 font-bold' : 'text-slate-400 font-medium'}`}>
+                                <AlertTriangle className={`w-3 h-3 ${isTaskOverdue ? 'text-rose-450 animate-pulse' : 'text-slate-300'}`} />
+                                <span className="whitespace-nowrap">Due: {task.dueDate}</span>
+                              </div>
+
+                              {/* Fast move button for quick progression */}
+                              {!isViewer && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const currentIdx = stages.findIndex(s => s.id === task.stageId);
+                                    const nextIdx = (currentIdx + 1) % stages.length;
+                                    onUpdateTaskStage(task.id, stages[nextIdx].id);
+                                  }}
+                                  className="p-0.5 bg-white border border-slate-150 text-slate-400 rounded hover:bg-slate-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors opacity-0 group-hover:opacity-100"
+                                  title="Advance lane"
+                                >
+                                  <ArrowRight className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </motion.div>
                         {dragOverTaskId === task.id && isDragOverBufferAfter && (

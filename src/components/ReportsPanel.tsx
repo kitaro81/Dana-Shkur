@@ -133,9 +133,6 @@ export const ReportsPanel: React.FC<ReportsPanelProps> = ({
 
         {/* Action Triggers */}
         <div className="flex items-center gap-2">
-          <div className="px-3 py-2 text-[10px] font-bold text-slate-400 italic">
-            Export tools moved to Center tab
-          </div>
         </div>
       </div>
 

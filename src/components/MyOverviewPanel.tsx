@@ -261,10 +261,6 @@ export function MyOverviewPanel({
             <ArrowUpDown className="w-3.5 h-3.5" />
             Sort: {sortOrder === 'asc' ? 'Earliest Deadline' : 'Latest Deadline'}
           </button>
-
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-slate-400 italic">
-            Export tools in Center tab
-          </div>
         </div>
       </div>
 

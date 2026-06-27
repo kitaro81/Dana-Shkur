@@ -9,7 +9,8 @@ export const INITIAL_USERS: User[] = [
     role: 'admin',
     joinedAt: '2026-01-15',
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120',
-    discipline: 'other'
+    discipline: 'other',
+    phoneNumber: '+1 (555) 019-2834'
   },
   {
     id: 'user-sarah',
@@ -19,7 +20,8 @@ export const INITIAL_USERS: User[] = [
     role: 'lead_designer',
     joinedAt: '2026-02-01',
     avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=120',
-    discipline: 'architecture'
+    discipline: 'architecture',
+    phoneNumber: '+1 (555) 014-9281'
   },
   {
     id: 'user-marcus',
@@ -29,7 +31,8 @@ export const INITIAL_USERS: User[] = [
     role: 'engineer',
     joinedAt: '2026-02-15',
     avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120',
-    discipline: 'structure'
+    discipline: 'structure',
+    phoneNumber: '+1 (555) 017-4820'
   },
   {
     id: 'user-elena',
@@ -39,7 +42,8 @@ export const INITIAL_USERS: User[] = [
     role: 'engineer',
     joinedAt: '2026-03-01',
     avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=120',
-    discipline: 'electric'
+    discipline: 'electric',
+    phoneNumber: '+1 (555) 012-3958'
   },
   {
     id: 'user-david',
@@ -49,7 +53,8 @@ export const INITIAL_USERS: User[] = [
     role: 'engineer',
     joinedAt: '2026-03-10',
     avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=120',
-    discipline: 'mechanical'
+    discipline: 'mechanical',
+    phoneNumber: '+1 (555) 013-8472'
   },
   {
     id: 'user-clara',
@@ -59,7 +64,8 @@ export const INITIAL_USERS: User[] = [
     role: 'viewer',
     joinedAt: '2026-03-20',
     avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=120',
-    discipline: 'other'
+    discipline: 'other',
+    phoneNumber: '+1 (555) 015-1029'
   }
 ];
 

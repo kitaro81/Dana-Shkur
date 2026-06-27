@@ -12,6 +12,7 @@ export interface User {
   joinedAt: string;
   discipline?: TaskType;
   deactivated?: boolean;
+  phoneNumber?: string;
 }
 
 export interface Project {
@@ -134,6 +135,8 @@ export interface VisualSettings {
   agileRequireStoryPoints?: boolean;
   agileEnforceSprintAssignment?: boolean;
   masterPassword?: string;
+  autoArchiveApprovedTasks?: boolean;
+  compactMode?: boolean;
 }
 
 export interface Message {

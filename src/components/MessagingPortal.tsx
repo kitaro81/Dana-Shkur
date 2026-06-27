@@ -176,17 +176,17 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-slate-800">Messages</h2>
             <div className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer">
-              <MoreVertical className="w-6 h-6 text-slate-500" />
+              <MoreVertical className="w-4 h-4 text-slate-500" />
             </div>
           </div>
           <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input 
               type="text"
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all outline-none"
+              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all outline-none"
             />
           </div>
         </div>
@@ -203,7 +203,7 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                 className="p-1 hover:bg-slate-250 text-slate-500 hover:text-indigo-650 rounded-md transition-colors cursor-pointer"
                 title="Create Team Conversation"
               >
-                <Plus className="w-5.5 h-5.5" />
+                <Plus className="w-3.5 h-3.5" />
               </button>
             </div>
             
@@ -224,7 +224,7 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                     }`}
                   >
                     <div className="shrink-0 w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                      <Hash className="w-6.5 h-6.5" />
+                      <Hash className="w-4.5 h-4.5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-0.5">
@@ -332,22 +332,16 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
             {/* Chat Header */}
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white z-10 w-full min-w-0">
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="relative group md:hidden shrink-0">
-                  <button 
-                    onClick={() => setSelectedChatId(null)}
-                    className="p-3 hover:bg-slate-100 active:bg-slate-200 rounded-full transition-all shrink-0 cursor-pointer"
-                    aria-label="Back to conversations list"
-                  >
-                    <ArrowLeft className="w-9 h-9 text-slate-600" />
-                  </button>
-                  <span className="absolute top-full mt-2 left-0 px-2.5 py-1 bg-slate-900/95 backdrop-blur-xs text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none transition-all duration-200 ease-out -translate-y-1 group-hover:translate-y-0 whitespace-nowrap z-50 shadow-md ring-1 ring-white/10">
-                    Back to List
-                  </span>
-                </div>
+                <button 
+                  onClick={() => setSelectedChatId(null)}
+                  className="md:hidden p-2 hover:bg-slate-100 rounded-full transition-colors shrink-0"
+                >
+                  <ArrowLeft className="w-5 h-5 text-slate-500" />
+                </button>
                 <div className="shrink-0">
                   {selectedChannel ? (
                     <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                      <Hash className="w-8 h-8" />
+                      <Hash className="w-5.5 h-5.5" />
                     </div>
                   ) : selectedUser?.avatarUrl ? (
                     <img src={selectedUser.avatarUrl} className="w-10 h-10 rounded-xl object-cover" alt="" />
@@ -378,14 +372,9 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0 ml-2">
-                <div className="relative group">
-                  <button className="p-3 hover:bg-slate-100 active:bg-slate-200 rounded-xl text-slate-500 hover:text-slate-700 transition-all cursor-pointer" aria-label="Conversation Details">
-                    <Info className="w-8 h-8" />
-                  </button>
-                  <span className="absolute top-full mt-2 right-0 px-2.5 py-1 bg-slate-900/95 backdrop-blur-xs text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none transition-all duration-200 ease-out -translate-y-1 group-hover:translate-y-0 whitespace-nowrap z-50 shadow-md ring-1 ring-white/10">
-                    Conversation Details
-                  </span>
-                </div>
+                <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
+                  <Info className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
@@ -393,7 +382,7 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-slate-50/20 w-full min-w-0">
               {conversationMessages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-8 text-slate-400 space-y-2">
-                  <MessageSquare className="w-12 h-12 stroke-1" />
+                  <MessageSquare className="w-8 h-8 stroke-1" />
                   <p className="text-xs font-medium">This conversation is quiet. Say hello!</p>
                 </div>
               ) : (
@@ -437,7 +426,7 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                             {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                           {isMe && !selectedChannel && (
-                            <CheckCircle2 className={`w-4.5 h-4.5 ${msg.read ? 'text-indigo-400' : 'text-slate-300'} shrink-0`} />
+                            <CheckCircle2 className={`w-3 h-3 ${msg.read ? 'text-indigo-400' : 'text-slate-300'} shrink-0`} />
                           )}
                         </div>
                       </div>
@@ -452,14 +441,9 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
             <div className="p-4 bg-white border-t border-slate-100 w-full min-w-0">
               <form onSubmit={handleSend} className="flex items-center gap-2 sm:gap-3 w-full min-w-0">
                 <div className="flex items-center gap-1 shrink-0">
-                  <div className="relative group">
-                    <button type="button" className="p-3 hover:bg-slate-100 active:bg-slate-200 rounded-xl text-slate-500 hover:text-slate-700 transition-all cursor-pointer" aria-label="Add Emoji">
-                      <Smile className="w-8 h-8" />
-                    </button>
-                    <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-slate-900/95 backdrop-blur-xs text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none transition-all duration-200 ease-out translate-y-1 group-hover:translate-y-0 whitespace-nowrap z-50 shadow-md ring-1 ring-white/10">
-                      Add Emoji
-                    </span>
-                  </div>
+                  <button type="button" className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors">
+                    <Smile className="w-4 h-4" />
+                  </button>
                 </div>
                 <input 
                   type="text"
@@ -468,26 +452,20 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                   onChange={(e) => setMessageText(e.target.value)}
                   className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all outline-none min-w-0"
                 />
-                <div className="relative group shrink-0">
-                  <button 
-                    type="submit"
-                    disabled={!messageText.trim()}
-                    className="p-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 text-white rounded-xl shadow-lg shadow-indigo-100 transition-all active:scale-95 shrink-0 cursor-pointer flex items-center justify-center"
-                    aria-label="Send Message"
-                  >
-                    <Send className="w-8 h-8" />
-                  </button>
-                  <span className="absolute bottom-full mb-2 right-0 px-2.5 py-1 bg-slate-900/95 backdrop-blur-xs text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none transition-all duration-200 ease-out translate-y-1 group-hover:translate-y-0 whitespace-nowrap z-50 shadow-md ring-1 ring-white/10">
-                    Send Message
-                  </span>
-                </div>
+                <button 
+                  type="submit"
+                  disabled={!messageText.trim()}
+                  className="p-2 sm:p-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 text-white rounded-xl shadow-lg shadow-indigo-100 transition-all active:scale-95 shrink-0 cursor-pointer"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
               </form>
             </div>
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
             <div className="w-20 h-20 bg-indigo-50 text-indigo-400 rounded-3xl flex items-center justify-center">
-              <MessageSquare className="w-15 h-15" />
+              <MessageSquare className="w-10 h-10" />
             </div>
             <div>
               <h3 className="text-lg font-bold text-slate-800">Select a conversation</h3>
@@ -511,19 +489,13 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
             >
               <div className="flex items-center justify-between p-4 border-b border-slate-100">
                 <h3 className="text-base font-bold text-slate-800">New Team Conversation</h3>
-                <div className="relative group">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateChannelModal(false)}
-                    className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-all cursor-pointer"
-                    aria-label="Close"
-                  >
-                    <X className="w-7.5 h-7.5" />
-                  </button>
-                  <span className="absolute top-full mt-1 right-0 px-2 py-1 bg-slate-900/95 backdrop-blur-xs text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none transition-all duration-200 ease-out whitespace-nowrap z-50 shadow-md">
-                    Close
-                  </span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateChannelModal(false)}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-all cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
               <form onSubmit={handleCreateChannel} className="p-4 space-y-4">
                 <div>
