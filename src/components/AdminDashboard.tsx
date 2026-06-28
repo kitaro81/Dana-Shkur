@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Project, User, WorkflowStage, UserRole, TaskType, VisualSettings, ReportTemplateSettings, Label, Task, TeamActivity } from '../types';
 import { Shield, Plus, Briefcase, PlusCircle, Trash, RefreshCw, Layers, Edit2, Users, Check, X, Sliders, Settings, FileText, Clock, Tag, Megaphone, Palette, AlertTriangle, Zap, Kanban, MessageSquare, Download, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { getBrandClasses } from '../utils/theme';
 
 interface AdminDashboardProps {
   projects: Project[];
@@ -56,6 +57,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   tasks = [],
   activities = [],
 }) => {
+  const brand = getBrandClasses(visualSettings?.primaryColor);
+  
   // Tabs: Flow/Stages, Team/Roles, Projects Setup, Preferences
   const [activeSubTab, setActiveSubTab] = useState<'stages' | 'users' | 'projects' | 'preferences'>('stages');
 
@@ -386,7 +389,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
           <button
             onClick={handleExportAuditLog}
-            className="shrink-0 self-start sm:self-center px-2.5 py-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-150 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer select-none"
+            className={`shrink-0 self-start sm:self-center px-2.5 py-1 text-[11px] font-bold ${brand.textSoft} ${brand.bgSoft} ${brand.bgSoftHover} border border-slate-200 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer select-none`}
             title="Download CSV containing the last 50 activities for compliance"
           >
             <Download className="w-3.5 h-3.5" /> Export Audit Log

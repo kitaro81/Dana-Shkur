@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Project, Task, User, WorkflowStage, FlowPermissions, TaskType } from '../types';
+import { Project, Task, User, WorkflowStage, FlowPermissions, TaskType, VisualSettings } from '../types';
 import { Archive, RefreshCw, Trash2, Search, Filter, Folder, Calendar, User as UserIcon, Clock, ExternalLink, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion } from 'motion/react';
 import { printReportHTML } from '../utils/reports';
+import { getBrandClasses } from '../utils/theme';
 
 interface ArchivePanelProps {
   projects: Project[];
@@ -16,6 +17,7 @@ interface ArchivePanelProps {
   onSelectTask: (taskId: string) => void;
   onToggleArchiveProject: (projectId: string) => void;
   onDeleteProject: (projectId: string) => void;
+  visualSettings?: VisualSettings;
 }
 
 export const ArchivePanel: React.FC<ArchivePanelProps> = ({
@@ -30,11 +32,14 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({
   onSelectTask,
   onToggleArchiveProject,
   onDeleteProject,
+  visualSettings,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'tasks' | 'projects' | 'deleted'>('tasks');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('all');
+
+  const brand = getBrandClasses(visualSettings?.primaryColor);
 
   const [isMobile, setIsMobile] = useState(false);
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
@@ -149,7 +154,7 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-3xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+            <div className={`p-2 ${brand.bgSoft} rounded-lg ${brand.text}`}>
               <Archive className="w-5 h-5" />
             </div>
             <div>
@@ -171,7 +176,7 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({
               }}
               className={`px-3.5 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                 activeSubTab === 'tasks'
-                  ? 'bg-white text-slate-800 shadow-3xs'
+                  ? `bg-white ${brand.text} shadow-3xs`
                   : 'text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -184,7 +189,7 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({
               }}
               className={`px-3.5 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                 activeSubTab === 'projects'
-                  ? 'bg-white text-slate-800 shadow-3xs'
+                  ? `bg-white ${brand.text} shadow-3xs`
                   : 'text-slate-500 hover:text-slate-900'
               }`}
             >
@@ -198,7 +203,7 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({
                 }}
                 className={`px-3.5 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
                   activeSubTab === 'deleted'
-                    ? 'bg-white text-slate-800 shadow-3xs'
+                    ? `bg-white ${brand.text} shadow-3xs`
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
@@ -214,7 +219,7 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({
       {/* FILTER BAR */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-3xs flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
             type="text"
             placeholder={
@@ -224,7 +229,7 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({
                   ? "Search deleted tasks..."
                   : "Search archived projects..."
             }
-            className="w-full text-xs pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:bg-white focus:border-indigo-500 transition-all text-slate-800"
+            className={`w-full text-xs pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-${visualSettings?.primaryColor || 'indigo'}-500 focus:bg-white focus:border-${visualSettings?.primaryColor || 'indigo'}-500 transition-all text-slate-800`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -311,7 +316,7 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({
                       onClick={() => isMobile && setExpandedTasks(prev => ({ ...prev, [task.id]: !prev[task.id] }))}
                       className={`flex items-start justify-between gap-2 ${isMobile ? 'cursor-pointer select-none pb-1' : ''}`}
                     >
-                      <h3 className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition-colors flex items-start gap-1.5 flex-1 leading-snug">
+                      <h3 className={`text-xs font-bold text-slate-900 group-hover:${brand.text} transition-colors flex items-start gap-1.5 flex-1 leading-snug`}>
                         <span className="text-slate-400 font-mono text-[10px] select-none">[{task.code}]</span>
                         <span>{task.title}</span>
                       </h3>
@@ -394,7 +399,7 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => onToggleArchiveTask(task.id)}
-                          className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer border border-indigo-200/20"
+                          className={`px-2.5 py-1 ${brand.bgSoft} ${brand.bgSoftHover} ${brand.textSoft} rounded-lg text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer border ${brand.borderBrandSoft}`}
                           title="Restore task back to live Kanban board"
                         >
                           <RefreshCw className="w-3 h-3" />
@@ -605,7 +610,7 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({
                     onClick={() => isMobile && setExpandedProjects(prev => ({ ...prev, [proj.id]: !prev[proj.id] }))}
                     className={`flex items-start justify-between gap-2 ${isMobile ? 'cursor-pointer select-none pb-1' : ''}`}
                   >
-                    <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors flex-1 leading-snug">
+                    <h3 className={`text-sm font-bold text-slate-900 group-hover:${brand.text} transition-colors flex-1 leading-snug`}>
                       {proj.name}
                     </h3>
                     {isMobile && (
@@ -645,7 +650,7 @@ export const ArchivePanel: React.FC<ArchivePanelProps> = ({
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => onToggleArchiveProject(proj.id)}
-                        className="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer border border-indigo-200/20"
+                        className={`px-3 py-1 ${brand.bgSoft} ${brand.bgSoftHover} ${brand.textSoft} rounded-lg text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer border ${brand.borderBrandSoft}`}
                       >
                         <RefreshCw className="w-3 h-3" />
                         Restore Project

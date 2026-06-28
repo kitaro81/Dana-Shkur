@@ -171,7 +171,7 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
   };
 
   return (
-    <div className="flex h-[calc(100vh-120px)] sm:h-[calc(100vh-180px)] bg-white border-y sm:border border-slate-200 rounded-none sm:rounded-2xl shadow-sm overflow-hidden w-full max-w-full min-w-0 relative">
+    <div className="flex flex-1 h-full min-h-0 bg-white border-y sm:border border-slate-200 rounded-none sm:rounded-2xl shadow-sm overflow-hidden w-full max-w-full min-w-0 relative">
       
       {/* Sidebar - Contacts & Team Channels */}
       <div className={`w-full md:w-80 border-r border-slate-100 flex flex-col bg-slate-50/30 ${selectedChatId ? 'hidden md:flex' : 'flex'}`}>
@@ -191,7 +191,7 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all outline-none"
+              className="w-full pl-9 pr-4 py-2 bg-white border border-[#e5e5e5] rounded text-sm focus:ring-1 focus:ring-black focus:border-black outline-none transition-all font-sans"
             />
           </div>
         </div>
@@ -205,7 +205,7 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
               <span>Team Conversations</span>
               <button 
                 onClick={() => setShowCreateChannelModal(true)}
-                className="p-1 hover:bg-slate-250 text-slate-500 hover:text-indigo-650 rounded-md transition-colors cursor-pointer"
+                className="p-1 hover:bg-[#fafafa] text-[#737373] hover:text-black rounded transition-colors cursor-pointer"
                 title="Create Team Conversation"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -223,15 +223,15 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                 return (
                   <div
                     key={channel.id}
-                    className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all text-left group relative ${
-                      isSelected ? 'bg-white shadow-3xs ring-1 ring-slate-150' : 'hover:bg-slate-100/50'
+                    className={`w-full flex items-center justify-between p-2.5 rounded transition-all text-left group relative ${
+                      isSelected ? 'bg-[#fafafa] border border-[#e5e5e5]' : 'hover:bg-[#fafafa]/50'
                     }`}
                   >
                     <button
                       onClick={() => setSelectedChatId(channel.id)}
                       className="flex-1 flex items-center gap-3 min-w-0 text-left focus:outline-none cursor-pointer"
                     >
-                      <div className="shrink-0 w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                      <div className="shrink-0 w-9 h-9 rounded bg-[#f5f5f5] text-black border border-[#e5e5e5] flex items-center justify-center">
                         <Hash className="w-4.5 h-4.5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -244,20 +244,20 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                           )}
                         </div>
                         <div className="flex items-center justify-between">
-                          <p className={`text-[11px] truncate ${unreadCount > 0 ? 'text-indigo-600 font-bold' : 'text-slate-500'}`}>
+                          <p className={`text-[11px] truncate ${unreadCount > 0 ? 'text-black font-bold' : 'text-[#737373]'}`}>
                             {lastMsg ? (
                               <>
-                                <span className="font-semibold text-slate-700">
+                                <span className="font-semibold text-black">
                                   {users.find(u => u.id === lastMsg.senderId)?.name.split(' ')[0] || 'User'}:
                                 </span>{' '}
                                 {lastMsg.text}
                               </>
                             ) : (
-                              <span className="italic text-slate-400">No messages yet</span>
+                              <span className="italic text-[#a3a3a3]">No messages yet</span>
                             )}
                           </p>
                           {unreadCount > 0 && (
-                            <span className="bg-indigo-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center shrink-0">
+                            <span className="bg-black text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center shrink-0 font-mono">
                               {unreadCount}
                             </span>
                           )}
@@ -306,8 +306,8 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                 return (
                   <div
                     key={user.id}
-                    className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all text-left group relative ${
-                      isSelected ? 'bg-white shadow-3xs ring-1 ring-slate-150' : 'hover:bg-slate-100/50'
+                    className={`w-full flex items-center justify-between p-2.5 rounded transition-all text-left group relative ${
+                      isSelected ? 'bg-[#fafafa] border border-[#e5e5e5]' : 'hover:bg-[#fafafa]/50'
                     }`}
                   >
                     <button
@@ -315,7 +315,7 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                       className="flex-1 flex items-center gap-3 min-w-0 text-left focus:outline-none cursor-pointer"
                     >
                       <div className="relative shrink-0">
-                        <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                        <div className="w-9 h-9 rounded bg-[#f5f5f5] text-black border border-[#e5e5e5] flex items-center justify-center font-bold text-xs">
                           {user.name[0]}
                         </div>
                         <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-white rounded-full ${user.deactivated ? 'bg-slate-300' : 'bg-emerald-500'}`} />
@@ -330,15 +330,15 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                           )}
                         </div>
                         <div className="flex items-center justify-between">
-                          <p className={`text-[11px] truncate ${unreadCount > 0 ? 'text-indigo-600 font-bold' : 'text-slate-500'}`}>
+                          <p className={`text-[11px] truncate ${unreadCount > 0 ? 'text-black font-bold' : 'text-[#737373]'}`}>
                             {lastMsg ? (
                               lastMsg.senderId === currentUser.id ? `You: ${lastMsg.text}` : lastMsg.text
                             ) : (
-                              <span className="italic text-slate-400">Start a conversation</span>
+                              <span className="italic text-[#a3a3a3]">Start a conversation</span>
                             )}
                           </p>
                           {unreadCount > 0 && (
-                            <span className="bg-indigo-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center shrink-0">
+                            <span className="bg-black text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center shrink-0 font-mono">
                               {unreadCount}
                             </span>
                           )}
@@ -384,11 +384,11 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                 </button>
                 <div className="shrink-0">
                   {selectedChannel ? (
-                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded bg-[#f5f5f5] text-black border border-[#e5e5e5] flex items-center justify-center">
                       <Hash className="w-5.5 h-5.5" />
                     </div>
                   ) : (
-                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                    <div className="w-10 h-10 rounded bg-[#f5f5f5] text-black border border-[#e5e5e5] flex items-center justify-center font-bold">
                       {selectedUser?.name[0]}
                     </div>
                   )}
@@ -438,7 +438,7 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                       {!isMe && (
                         <div className="w-8 shrink-0">
                           {showAvatar && (
-                            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-bold">
+                            <div className="w-8 h-8 rounded bg-[#f5f5f5] text-black border border-[#e5e5e5] flex items-center justify-center text-xs font-bold">
                               {msgSender?.name[0] || 'U'}
                             </div>
                           )}
@@ -451,10 +451,10 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                           </span>
                         )}
                         <div 
-                          className={`px-4 py-2 text-xs font-medium rounded-2xl shadow-3xs break-words overflow-hidden max-w-full ${
+                          className={`px-4 py-2 text-xs font-medium rounded shadow-sm break-words overflow-hidden max-w-full ${
                             isMe 
-                              ? 'bg-indigo-600 text-white rounded-br-none' 
-                              : 'bg-white border border-slate-100 text-slate-800 rounded-bl-none'
+                              ? 'bg-black text-white' 
+                              : 'bg-white border border-[#e5e5e5] text-black'
                           }`}
                         >
                           <p className="whitespace-pre-wrap break-words">{msg.text}</p>
@@ -464,7 +464,7 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                             {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                           {isMe && !selectedChannel && (
-                            <CheckCircle2 className={`w-3 h-3 ${msg.read ? 'text-indigo-400' : 'text-slate-300'} shrink-0`} />
+                            <CheckCircle2 className={`w-3 h-3 ${msg.read ? 'text-black' : 'text-[#737373]'} shrink-0`} />
                           )}
                         </div>
                       </div>
@@ -503,12 +503,12 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
                   placeholder={selectedChannel ? `Message #${selectedChannel.name}...` : `Message ${selectedUser?.name}...`}
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
-                  className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all outline-none min-w-0"
+                  className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 bg-[#fafafa] border border-[#e5e5e5] rounded text-xs sm:text-sm focus:ring-1 focus:ring-black focus:border-black transition-all outline-none min-w-0 font-sans"
                 />
                 <button 
                   type="submit"
                   disabled={!messageText.trim()}
-                  className="p-2 sm:p-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 text-white rounded-xl shadow-lg shadow-indigo-100 transition-all active:scale-95 shrink-0 cursor-pointer"
+                  className="p-2 sm:p-2.5 bg-black hover:bg-[#333333] disabled:bg-[#f5f5f5] disabled:text-[#a3a3a3] text-white rounded transition-all shrink-0 cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -517,7 +517,7 @@ export const MessagingPortal: React.FC<MessagingPortalProps> = ({
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
-            <div className="w-20 h-20 bg-indigo-50 text-indigo-400 rounded-3xl flex items-center justify-center">
+            <div className="w-20 h-20 bg-[#f5f5f5] text-black rounded border border-[#e5e5e5] flex items-center justify-center">
               <MessageSquare className="w-10 h-10" />
             </div>
             <div>

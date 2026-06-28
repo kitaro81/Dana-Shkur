@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Task, Project, User, WorkflowStage, TaskType } from '../types';
+import { Task, Project, User, WorkflowStage, TaskType, VisualSettings } from '../types';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -23,6 +23,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { getBrandClasses } from '../utils/theme';
 
 interface CalendarViewProps {
   tasks: Task[];
@@ -33,6 +34,7 @@ interface CalendarViewProps {
   onSelectTask: (taskId: string) => void;
   currentUser: User;
   onUpdateTask?: (updatedTask: Task) => void;
+  visualSettings?: VisualSettings;
 }
 
 export interface TaskMarker {
@@ -60,8 +62,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onSelectTask,
   currentUser,
   onUpdateTask,
+  visualSettings,
 }) => {
   const isTeamMember = currentUser.role !== 'admin' && currentUser.role !== 'viewer';
+  
+  const brand = getBrandClasses(visualSettings?.primaryColor);
   
   // Use 2026-06-22 as default anchor today, matching other system dates
   const todayAnchor = new Date('2026-06-22');
@@ -446,7 +451,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               <button
                 onClick={() => setGroupBy('project')}
                 className={`px-3 py-1 text-[11px] font-bold rounded transition-colors cursor-pointer ${
-                  groupBy === 'project' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+                  groupBy === 'project' ? `${brand.bg} text-white` : 'text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 Project
@@ -454,7 +459,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               <button
                 onClick={() => setGroupBy('discipline')}
                 className={`px-3 py-1 text-[11px] font-bold rounded transition-colors cursor-pointer ${
-                  groupBy === 'discipline' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+                  groupBy === 'discipline' ? `${brand.bg} text-white` : 'text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 Discipline
@@ -462,7 +467,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               <button
                 onClick={() => setGroupBy('assignee')}
                 className={`px-3 py-1 text-[11px] font-bold rounded transition-colors cursor-pointer ${
-                  groupBy === 'assignee' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+                  groupBy === 'assignee' ? `${brand.bg} text-white` : 'text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 Assignee
@@ -484,7 +489,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               }}
               className={`px-2.5 py-1.5 border text-[11px] font-bold rounded-lg cursor-pointer transition-colors flex items-center gap-1 shadow-3xs ${
                 snapToGrid 
-                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100' 
+                  ? `${brand.bgSoft} ${brand.borderBrandSoft} ${brand.textSoft} ${brand.bgSoftHover}` 
                   : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'
               }`}
               title={snapToGrid ? "Align milestones and task adjustments to day grids" : "Free alignment mode"}
@@ -573,17 +578,17 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="bg-indigo-600 text-white text-xs font-semibold px-4 py-2.5 flex items-center justify-between border-b border-indigo-500 shadow-inner"
+              className={`text-white text-xs font-semibold px-4 py-2.5 flex items-center justify-between border-b shadow-inner ${brand.bg} ${brand.borderBrand}`}
             >
               <div className="flex items-center gap-2">
-                <div className="bg-indigo-500 p-1 rounded-full">
+                <div className="bg-white/20 p-1 rounded-full">
                   <Pin className="w-3.5 h-3.5 text-white" />
                 </div>
                 <span>{feedbackMessage}</span>
               </div>
               <button 
                 onClick={() => setFeedbackMessage(null)}
-                className="text-[10px] bg-indigo-700 hover:bg-indigo-800 text-indigo-100 font-bold px-2 py-0.5 rounded transition-all cursor-pointer"
+                className={`text-[10px] ${brand.bgHover} text-white font-bold px-2 py-0.5 rounded transition-all cursor-pointer`}
               >
                 Dismiss
               </button>
@@ -621,7 +626,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       type="date" 
                       value={markerFormDate}
                       onChange={(e) => setMarkerFormDate(e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className={`w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-${visualSettings?.primaryColor || 'indigo'}-500`}
                       required
                     />
                   </div>
@@ -632,7 +637,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       placeholder="e.g. Stage 1 Scheme Deliverable"
                       value={markerFormTitle}
                       onChange={(e) => setMarkerFormTitle(e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-400"
+                      className={`w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-${visualSettings?.primaryColor || 'indigo'}-500 placeholder-slate-400`}
                       required
                     />
                   </div>
@@ -648,7 +653,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       <select
                         value={markerFormColor}
                         onChange={(e) => setMarkerFormColor(e.target.value)}
-                        className="flex-1 px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className={`flex-1 px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-${visualSettings?.primaryColor || 'indigo'}-500`}
                       >
                         <option value="#EF4444">Rose Red</option>
                         <option value="#F59E0B">Amber Yellow</option>
@@ -668,14 +673,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     placeholder="Provide details about what must be locked, compiled, or reviewed by this milestone..."
                     value={markerFormDesc}
                     onChange={(e) => setMarkerFormDesc(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder-slate-400"
+                    className={`w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:ring-1 focus:ring-${visualSettings?.primaryColor || 'indigo'}-500 placeholder-slate-400`}
                   />
                 </div>
 
                 <div className="flex justify-end pt-1">
                   <button
                     type="submit"
-                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg cursor-pointer transition-colors flex items-center gap-1 shadow-2xs"
+                    className={`px-4 py-1.5 ${brand.bg} ${brand.bgHover} text-white text-xs font-bold rounded-lg cursor-pointer transition-colors flex items-center gap-1 shadow-2xs`}
                   >
                     <Flag className="w-3.5 h-3.5" />
                     <span>Pin Milestone Marker</span>
@@ -705,7 +710,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     <div 
                       key={dateStr} 
                       className={`text-center py-1 flex flex-col items-center justify-center border-l border-slate-100/60 font-mono relative group ${
-                        isToday ? 'bg-indigo-50/50' : ''
+                        isToday ? `${brand.bgSoft}/50` : ''
                       }`}
                     >
                       {/* Milestone Flag Badge indicators with tooltip details */}
@@ -731,11 +736,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         </div>
                       )}
 
-                      <span className={`text-[9px] font-bold uppercase ${isToday ? 'text-indigo-600' : 'text-slate-400'}`}>
+                      <span className={`text-[9px] font-bold uppercase ${isToday ? brand.text : 'text-slate-400'}`}>
                         {dateObj.toLocaleDateString(undefined, { weekday: 'short' })}
                       </span>
                       <span className={`text-xs font-extrabold mt-0.5 px-1.5 rounded-full ${
-                        isToday ? 'bg-indigo-600 text-white font-black scale-105' : 'text-slate-700'
+                        isToday ? `${brand.bg} text-white font-black scale-105` : 'text-slate-700'
                       }`}>
                         {dateObj.getDate()}
                       </span>
@@ -764,7 +769,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       {/* Lane details block */}
                       <div className="w-[180px] shrink-0 p-3 flex flex-col justify-center border-r border-slate-100 bg-slate-50/40 select-none">
                         <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-[9px] font-bold shrink-0">
+                          <div className={`w-5 h-5 rounded-full ${brand.bgSoft} ${brand.textSoft} flex items-center justify-center text-[9px] font-bold shrink-0`}>
                             {lane.name[0]}
                           </div>
                           <div className="min-w-0">
@@ -799,17 +804,17 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                                   }
                                 }}
                                 className={`border-l border-slate-100 h-full transition-colors relative group ${
-                                  isToday ? 'bg-indigo-50/10 border-l-indigo-200/50' : ''
+                                  isToday ? `${brand.bgSoft}/10 ${brand.borderBrandSoft}/50` : ''
                                 } ${
                                   selectedTaskId 
-                                    ? 'cursor-pointer hover:bg-indigo-100/30' 
+                                    ? `cursor-pointer ${brand.bgSoftHover}/30` 
                                     : ''
                                 }`}
                                 title={selectedTaskId ? `Click to snap selected task due date to ${dateStr} (Snap to Grid)` : undefined}
                               >
                                 {selectedTaskId && (
                                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                    <span className="text-[8px] font-mono font-bold text-indigo-600 bg-white border border-indigo-200 px-1.5 py-0.5 rounded shadow-3xs">
+                                    <span className={`text-[8px] font-mono font-bold ${brand.text} bg-white border ${brand.borderBrandSoft} px-1.5 py-0.5 rounded shadow-3xs`}>
                                       Snap Date
                                     </span>
                                   </div>
@@ -862,7 +867,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                                 }}
                                 className={`absolute h-8 rounded-lg shadow-3xs hover:shadow-2xs border px-2 flex items-center justify-between gap-1.5 cursor-pointer transition-all ${
                                   isSelected 
-                                    ? 'ring-2 ring-indigo-600 ring-offset-1 z-30 font-extrabold scale-[1.01]' 
+                                    ? `ring-2 ${brand.ring} ring-offset-1 z-30 font-extrabold scale-[1.01]` 
                                     : 'z-10 hover:scale-[1.005]'
                                 } ${getTypeColorClasses(pt.task.type)}`}
                               >
@@ -954,10 +959,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         
         {/* Upper Details Block */}
         <div className="space-y-4">
-          <div className="pb-3 border-b border-indigo-100">
-            <span className="text-[9px] uppercase font-bold tracking-widest text-indigo-500 block">Schedule Timeline</span>
+          <div className={`pb-3 border-b ${brand.borderBrandSoft}`}>
+            <span className={`text-[9px] uppercase font-bold tracking-widest ${brand.text} block`}>Schedule Timeline</span>
             <h3 className="text-sm font-extrabold text-slate-800 flex items-center gap-1.5 mt-0.5">
-              <CalendarIcon className="w-4 h-4 text-indigo-500" /> Track Scheduler
+              <CalendarIcon className={`w-4 h-4 ${brand.text}`} /> Track Scheduler
             </h3>
             <p className="text-[10px] font-mono text-slate-400 mt-1">
               Currently tracking Gantt durations from design inception to approved construction release.
@@ -998,7 +1003,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   </div>
                   <div className="flex justify-between">
                     <span>Due Date:</span>
-                    <span className="font-extrabold text-indigo-600">{selectedTaskObj.dueDate}</span>
+                    <span className={`font-extrabold ${brand.text}`}>{selectedTaskObj.dueDate}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Est Hours:</span>
@@ -1012,7 +1017,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
                 {selectedTaskAssignee && (
                   <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-                    <div className="w-5 h-5 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-[9px] font-bold border border-slate-200 flex-shrink-0">
+                    <div className={`w-5 h-5 rounded-full ${brand.bgSoft} ${brand.textSoft} flex items-center justify-center text-[9px] font-bold border border-slate-200 flex-shrink-0`}>
                       {selectedTaskAssignee.name[0]}
                     </div>
                     <div className="min-w-0">
@@ -1024,7 +1029,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
                 <button
                   onClick={() => onSelectTask(selectedTaskObj.id)}
-                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  className={`w-full py-2 ${brand.bg} ${brand.bgHover} text-white rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer`}
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   Open Task Workspace
@@ -1041,7 +1046,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     <div className="space-y-1">
                       <div className="flex justify-between items-center text-[9px] font-bold text-slate-500 uppercase font-mono">
                         <span>Slide Task Position</span>
-                        <span className="text-indigo-600 bg-indigo-50 px-1 rounded">Shift Date</span>
+                        <span className={`px-1 rounded ${brand.textSoft} ${brand.bgSoft}`}>Shift Date</span>
                       </div>
                       <div className="grid grid-cols-4 gap-1">
                         <button
@@ -1154,7 +1159,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               )}
               <button
                 onClick={() => setShowAddMarker(true)}
-                className="text-[9px] text-indigo-600 hover:underline font-bold cursor-pointer"
+                className={`text-[9px] ${brand.text} hover:underline font-bold cursor-pointer`}
               >
                 + Add Marker
               </button>
@@ -1168,7 +1173,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 onMouseEnter={() => setHoveredMarkerId(m.id)}
                 onMouseLeave={() => setHoveredMarkerId(null)}
                 className={`p-2 rounded-lg bg-white border text-[10px] flex items-center justify-between gap-1.5 transition-all ${
-                  hoveredMarkerId === m.id ? 'border-indigo-400 shadow-3xs' : 'border-slate-150'
+                  hoveredMarkerId === m.id ? `${brand.borderBrand} shadow-3xs` : 'border-slate-150'
                 }`}
               >
                 <div className="flex items-start gap-1.5 min-w-0">

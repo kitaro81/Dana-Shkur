@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Project, Task, User, WorkflowStage, Label } from '../types';
+import { Project, Task, User, WorkflowStage, Label, VisualSettings } from '../types';
 import { 
   Calendar, 
   CheckCircle, 
@@ -16,6 +16,7 @@ import {
   CircleDot
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { getBrandClasses } from '../utils/theme';
 
 interface MyOverviewPanelProps {
   tasks: Task[];
@@ -24,6 +25,7 @@ interface MyOverviewPanelProps {
   stages: WorkflowStage[];
   currentUser: User;
   onSelectTask: (taskId: string) => void;
+  visualSettings?: VisualSettings;
 }
 
 export function MyOverviewPanel({ 
@@ -32,13 +34,16 @@ export function MyOverviewPanel({
   users, 
   stages, 
   currentUser, 
-  onSelectTask 
+  onSelectTask,
+  visualSettings
 }: MyOverviewPanelProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [projectFilter, setProjectFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('active'); // 'all' | 'active' | 'completed'
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const brand = getBrandClasses(visualSettings?.primaryColor);
 
   // Find all tasks assigned to current user
   const myTasks = useMemo(() => {
@@ -241,22 +246,19 @@ export function MyOverviewPanel({
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded border border-[#e5e5e5]">
         <div>
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Folder className="w-5 h-5 text-indigo-600" />
+          <h2 className="text-base font-bold text-black flex items-center gap-2">
+            <Folder className={`w-5 h-5 ${brand.text}`} />
             My Work Overview
           </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Keep track of all your assigned responsibilities across every project. Prioritized and sorted by deadlines.
-          </p>
         </div>
 
         {/* Action button bar */}
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all cursor-pointer shadow-3xs"
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded border border-[#e5e5e5] bg-white text-[#737373] hover:bg-slate-50 ${brand.hoverText} ${brand.hoverBorder} transition-all cursor-pointer`}
           >
             <ArrowUpDown className="w-3.5 h-3.5" />
             Sort: {sortOrder === 'asc' ? 'Earliest Deadline' : 'Latest Deadline'}
@@ -265,22 +267,22 @@ export function MyOverviewPanel({
       </div>
 
       {/* KPI Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {/* Total Assigned */}
-        <div className="bg-white border border-slate-200 p-4 rounded-xl">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Assigned Tasks</p>
-          <h3 className="text-2xl font-bold text-slate-900 mt-1">
+        <div className={`bg-white border border-[#e5e5e5] border-t-4 ${brand.borderBrand} p-4 rounded shadow-sm`}>
+          <p className="text-[10px] font-bold text-[#737373] uppercase tracking-wider font-mono">Total Assigned Tasks</p>
+          <h3 className="text-2xl font-bold text-black mt-1">
             {stats.total}
           </h3>
-          <p className="text-[10px] text-slate-500 mt-1.5">
+          <p className="text-[10px] text-[#737373] mt-1.5 font-mono">
             Across all authorized projects
           </p>
         </div>
 
         {/* Active Work */}
-        <div className="bg-white border border-slate-200 p-4 rounded-xl">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Responsibilities</p>
-          <h3 className="text-2xl font-bold text-indigo-600 mt-1">
+        <div className={`bg-white border border-[#e5e5e5] border-t-4 ${brand.borderBrand} p-4 rounded shadow-sm`}>
+          <p className="text-[10px] font-bold text-[#737373] uppercase tracking-wider font-mono">Active Responsibilities</p>
+          <h3 className="text-2xl font-bold text-black mt-1">
             {stats.active}
           </h3>
           <p className="text-[10px] text-slate-500 mt-1.5">
@@ -289,31 +291,31 @@ export function MyOverviewPanel({
         </div>
 
         {/* Overdue Limit */}
-        <div className={`p-4 rounded-xl border ${
+        <div className={`p-4 rounded border border-t-4 ${
           stats.overdue > 0 
-            ? 'bg-red-50/50 border-red-200' 
-            : 'bg-white border-slate-200'
-        }`}>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Overdue Actions</p>
+            ? 'bg-red-50/20 border-red-200 border-t-red-500' 
+            : `bg-white border-[#e5e5e5] ${brand.borderBrand}`
+        } shadow-sm`}>
+          <p className="text-[10px] font-bold text-[#737373] uppercase tracking-wider font-mono">Overdue Actions</p>
           <h3 className={`text-2xl font-bold mt-1 ${
-            stats.overdue > 0 ? 'text-red-600' : 'text-slate-900'
+            stats.overdue > 0 ? 'text-red-600' : 'text-black'
           }`}>
             {stats.overdue}
           </h3>
-          <p className="text-[10px] text-slate-500 mt-1.5">
+          <p className="text-[10px] text-[#737373] mt-1.5 font-mono">
             Deadlines missed
           </p>
         </div>
 
         {/* Due soon */}
-        <div className={`p-4 rounded-xl border ${
+        <div className={`p-4 rounded border border-t-4 ${
           stats.dueSoon > 0 
-            ? 'bg-amber-50/50 border-amber-200' 
-            : 'bg-white border-slate-200'
-        }`}>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Due Soon</p>
+            ? 'bg-amber-50/25 border-amber-200 border-t-amber-500' 
+            : `bg-white border-[#e5e5e5] ${brand.borderBrand}`
+        } shadow-sm`}>
+          <p className="text-[10px] font-bold text-[#737373] uppercase tracking-wider font-mono">Due Soon</p>
           <h3 className={`text-2xl font-bold mt-1 ${
-            stats.dueSoon > 0 ? 'text-amber-600' : 'text-slate-900'
+            stats.dueSoon > 0 ? 'text-amber-600' : 'text-black'
           }`}>
             {stats.dueSoon}
           </h3>
@@ -324,14 +326,14 @@ export function MyOverviewPanel({
       </div>
 
       {/* Filter Options & List Control Panel */}
-      <div className="bg-white border border-slate-200 p-4 rounded-xl flex flex-col md:flex-row gap-3 items-center justify-between shadow-3xs">
+      <div className="bg-white border border-[#e5e5e5] p-4 rounded flex flex-col md:flex-row gap-3 items-center justify-between shadow-sm">
         {/* Search */}
         <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <Search className="w-4 h-4 text-[#737373] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search by task title, description, ID..."
-            className="w-full text-xs pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800"
+            className={`w-full text-xs pl-9 pr-4 py-2 bg-[#fafafa] border border-[#e5e5e5] rounded focus:outline-none ${brand.borderFocus} focus:ring-1 ${brand.ring} text-black font-sans`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -340,33 +342,33 @@ export function MyOverviewPanel({
         {/* Filters Group */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           {/* Status filter tabs */}
-          <div className="inline-flex rounded-lg shadow-3xs bg-slate-100 p-1">
+          <div className="inline-flex rounded bg-slate-100 p-1">
             <button
               onClick={() => setStatusFilter('active')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded transition-all cursor-pointer ${
                 statusFilter === 'active'
-                  ? 'bg-white text-slate-800 shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? `${brand.bg} text-white shadow-sm`
+                  : 'text-[#737373] hover:text-black'
               }`}
             >
               Active
             </button>
             <button
               onClick={() => setStatusFilter('completed')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded transition-all cursor-pointer ${
                 statusFilter === 'completed'
-                  ? 'bg-white text-slate-800 shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? `${brand.bg} text-white shadow-sm`
+                  : 'text-[#737373] hover:text-black'
               }`}
             >
               Completed
             </button>
             <button
               onClick={() => setStatusFilter('all')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+              className={`px-3 py-1.5 text-xs font-semibold rounded transition-all cursor-pointer ${
                 statusFilter === 'all'
-                  ? 'bg-white text-slate-800 shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? `${brand.bg} text-white shadow-sm`
+                  : 'text-[#737373] hover:text-black'
               }`}
             >
               All
@@ -375,7 +377,7 @@ export function MyOverviewPanel({
 
           {/* Project Dropdown */}
           <select
-            className="text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className={`text-xs px-2.5 py-1.5 bg-[#fafafa] border border-[#e5e5e5] rounded text-black focus:outline-none ${brand.borderFocus} focus:ring-1 ${brand.ring} font-sans cursor-pointer`}
             value={projectFilter}
             onChange={(e) => setProjectFilter(e.target.value)}
           >
@@ -387,7 +389,7 @@ export function MyOverviewPanel({
 
           {/* Priority Dropdown */}
           <select
-            className="text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className={`text-xs px-2.5 py-1.5 bg-[#fafafa] border border-[#e5e5e5] rounded text-black focus:outline-none ${brand.borderFocus} focus:ring-1 ${brand.ring} font-sans cursor-pointer`}
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
           >
@@ -400,12 +402,12 @@ export function MyOverviewPanel({
       </div>
 
       {/* Main Unified Task List */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-          <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider font-mono">
+      <div className="bg-white border border-[#e5e5e5] rounded overflow-hidden shadow-sm">
+        <div className="p-4 border-b border-[#e5e5e5] bg-[#fafafa] flex items-center justify-between">
+          <h3 className="text-xs font-bold text-black uppercase tracking-wider font-mono">
             Unified Queue ({filteredAndSortedTasks.length} tasks)
           </h3>
-          <span className="text-[10px] bg-indigo-50 text-indigo-700 font-mono px-2 py-0.5 rounded">
+          <span className={`text-[10px] ${brand.bg} text-white font-mono px-2 py-0.5 rounded`}>
             Filtered View
           </span>
         </div>
@@ -435,25 +437,25 @@ export function MyOverviewPanel({
                     <div className="flex flex-wrap items-center gap-1.5">
                       {/* Project Pill */}
                       {project && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded font-mono">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold text-black ${brand.bgSoft} px-2 py-0.5 rounded font-mono border ${brand.borderBrandSoft}`}>
                           {project.name}
                         </span>
                       )}
                       
                       {/* Task Code */}
                       {task.code && (
-                        <span className="text-[10px] font-mono text-slate-400 font-semibold">
+                        <span className="text-[10px] font-mono text-[#737373] font-semibold">
                           #{task.code}
                         </span>
                       )}
 
                       {/* Discipline / Type Pill */}
-                      <span className="text-[10px] uppercase font-bold text-slate-500 font-mono px-1.5 py-0.2 bg-slate-100 rounded">
+                      <span className="text-[10px] uppercase font-bold text-[#737373] font-mono px-1.5 py-0.2 bg-[#f5f5f5] rounded border border-[#e5e5e5]">
                         {task.type}
                       </span>
                     </div>
 
-                    <h4 className="text-sm font-bold text-slate-850 group-hover:text-indigo-600 transition-colors">
+                    <h4 className={`text-sm font-bold text-black ${brand.hoverText} transition-colors`}>
                       {task.title}
                     </h4>
 
@@ -491,7 +493,7 @@ export function MyOverviewPanel({
                     </div>
 
                     {/* Open action chevron */}
-                    <div className="hidden sm:block p-1 rounded-full group-hover:bg-slate-100 text-slate-400 group-hover:text-indigo-600 transition-all">
+                    <div className={`hidden sm:block p-1 rounded-full group-hover:bg-slate-100 ${brand.text} transition-all`}>
                       <ChevronRight className="w-4 h-4" />
                     </div>
                   </div>

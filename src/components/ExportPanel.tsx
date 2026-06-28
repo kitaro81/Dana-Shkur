@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Task, Project, TeamActivity, User } from '../types';
+import { Task, Project, TeamActivity, User, VisualSettings } from '../types';
 import { 
   Download, 
   FileText, 
@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import { getBrandClasses } from '../utils/theme';
 
 // Extend jsPDF with autoTable for TypeScript
 declare module 'jspdf' {
@@ -31,6 +32,7 @@ interface ExportPanelProps {
   projects: Project[];
   activities: TeamActivity[];
   users: User[];
+  visualSettings?: VisualSettings;
 }
 
 type ExportSource = 'tasks' | 'projects' | 'activities';
@@ -42,11 +44,23 @@ interface ColumnOption {
   enabled: boolean;
 }
 
-export const ExportPanel: React.FC<ExportPanelProps> = ({ tasks, projects, activities, users }) => {
+export const ExportPanel: React.FC<ExportPanelProps> = ({ tasks, projects, activities, users, visualSettings }) => {
   const [source, setSource] = useState<ExportSource>('tasks');
   const [format, setFormat] = useState<ExportFormat>('excel');
   const [columns, setColumns] = useState<ColumnOption[]>([]);
   const [isExporting, setIsExporting] = useState(false);
+
+  const brand = getBrandClasses(visualSettings?.primaryColor);
+
+  const pdfColorMap: Record<string, [number, number, number]> = {
+    indigo: [79, 70, 229],
+    emerald: [16, 185, 129],
+    amber: [245, 158, 11],
+    rose: [244, 63, 94],
+    violet: [139, 92, 246],
+    cyan: [6, 182, 212]
+  };
+  const pdfColor = pdfColorMap[visualSettings?.primaryColor || 'indigo'] || [79, 70, 229];
 
   // Column definitions for each source
   const columnDefinitions: Record<ExportSource, ColumnOption[]> = {
@@ -158,7 +172,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ tasks, projects, activ
           head: [headers],
           body: body,
           styles: { fontSize: 8, cellPadding: 2 },
-          headStyles: { fillColor: [79, 70, 229] }, // indigo-600
+          headStyles: { fillColor: pdfColor }, // dynamic brand header color
         });
 
         doc.save(`${filename}.pdf`);
@@ -175,7 +189,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ tasks, projects, activ
       {/* Header */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+          <div className={`w-12 h-12 rounded-xl ${brand.bg} flex items-center justify-center text-white shadow-lg shadow-slate-100`}>
             <Download className="w-6 h-6" />
           </div>
           <div>
@@ -195,7 +209,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ tasks, projects, activ
           {/* Source Selection */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Filter className="w-4 h-4 text-indigo-500" />
+              <Filter className={`w-4 h-4 ${brand.text}`} />
               <h2 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Select Data Source</h2>
             </div>
             <div className="space-y-2">
@@ -209,13 +223,13 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ tasks, projects, activ
                   onClick={() => setSource(item.id as ExportSource)}
                   className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${
                     source === item.id 
-                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' 
+                      ? `${brand.bgSoft} ${brand.borderBrandSoft} ${brand.textSoft} shadow-sm` 
                       : 'bg-white border-slate-100 text-slate-600 hover:border-slate-200 hover:bg-slate-50'
                   }`}
                 >
                   <span className="text-sm font-semibold">{item.label}</span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    source === item.id ? 'bg-indigo-200 text-indigo-800' : 'bg-slate-100 text-slate-500'
+                    source === item.id ? `${brand.bg} text-white` : 'bg-slate-100 text-slate-500'
                   }`}>
                     {item.count} items
                   </span>
@@ -258,12 +272,12 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ tasks, projects, activ
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
             <div className="p-5 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Columns className="w-4 h-4 text-indigo-500" />
+                <Columns className={`w-4 h-4 ${brand.text}`} />
                 <h2 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Customize Template Columns</h2>
               </div>
               <button 
                 onClick={() => setColumns(prev => prev.map(c => ({ ...c, enabled: true })))}
-                className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 uppercase tracking-wider"
+                className={`text-[10px] font-bold ${brand.text} ${brand.hoverText} uppercase tracking-wider`}
               >
                 Reset to Default
               </button>
@@ -276,19 +290,19 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ tasks, projects, activ
                   onClick={() => toggleColumn(col.key)}
                   className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
                     col.enabled 
-                      ? 'bg-slate-50 border-slate-200 text-slate-800' 
+                      ? 'bg-slate-50 border-slate-200 text-slate-800 font-medium' 
                       : 'bg-white border-slate-100 text-slate-400 opacity-60'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
-                      col.enabled ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-300'
+                      col.enabled ? `${brand.bg} text-white` : 'bg-slate-100 text-slate-300'
                     }`}>
                       {col.enabled ? <Check className="w-3 h-3" /> : <div className="w-2 h-2 rounded-full bg-slate-300" />}
                     </div>
                     <span className="text-sm font-semibold">{col.label}</span>
                   </div>
-                  {col.enabled ? <Eye className="w-4 h-4 text-slate-400" /> : <EyeOff className="w-4 h-4 text-slate-300" />}
+                  {col.enabled ? <Eye className={`w-4 h-4 ${brand.text}`} /> : <EyeOff className="w-4 h-4 text-slate-300" />}
                 </button>
               ))}
             </div>
@@ -304,7 +318,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({ tasks, projects, activ
                   className={`w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-bold text-sm transition-all shadow-lg ${
                     isExporting || columns.filter(c => c.enabled).length === 0
                       ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                      : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:-translate-y-0.5 active:translate-y-0 shadow-indigo-200'
+                      : `${brand.bg} text-white ${brand.bgHover} hover:-translate-y-0.5 active:translate-y-0 shadow-slate-100`
                   }`}
                 >
                   {isExporting ? (

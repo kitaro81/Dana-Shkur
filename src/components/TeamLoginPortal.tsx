@@ -52,9 +52,9 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-between relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-white flex flex-col justify-between relative overflow-hidden font-sans text-[#0a0a0a]">
       {/* Grid Pattern Background */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.02] mix-blend-overlay">
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay">
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -66,18 +66,14 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
       </div>
 
       {/* Header bar */}
-      <header className="px-6 py-4 flex items-center justify-between border-b border-slate-150 bg-white/80 backdrop-blur-md z-10">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-indigo-600 text-white rounded-lg shadow-sm shadow-indigo-100">
-            <Layers className="w-4 h-4" />
-          </div>
-          <span className="text-xs font-bold tracking-wider text-slate-800 uppercase font-mono">
-            Nexus Design Ops
-          </span>
+      <header className="px-8 py-6 flex items-center justify-between border-b border-[#e5e5e5] bg-white/80 backdrop-blur-md z-10">
+        <div className="flex items-center gap-2.5 font-mono text-[10px] sm:text-xs font-bold uppercase tracking-[0.15em] text-black">
+          <span className="w-2.5 h-2.5 bg-black block shrink-0" />
+          <span>NCPT // SYSTEM PORTAL</span>
         </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>System Portal Active</span>
+        <div className="flex items-center gap-1.5 font-mono text-[9px] text-[#737373] uppercase tracking-widest">
+          <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
+          <span>PORTAL ACTIVE</span>
         </div>
       </header>
 
@@ -85,16 +81,15 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
       <main className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 z-10">
         <div className="w-full max-w-md">
           {/* Welcome Intro */}
-          <div className="text-center space-y-2 mb-6">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-[10px] font-bold uppercase tracking-wider">
-              <Shield className="w-3 h-3" />
-              Gateway Verification
-            </div>
-            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
+          <div className="text-center space-y-3 mb-8">
+            <span className="meta-label block font-mono text-[10px] uppercase tracking-[0.2em] text-[#737373]">
+              SECURE VERIFICATION NODE
+            </span>
+            <h2 className="font-sans text-4xl md:text-5xl font-light tracking-tight leading-[0.9] text-[#0a0a0a]">
               Sign In to Your Workspace
             </h2>
-            <p className="text-xs text-slate-500">
-              Enter the credentials provided by your Administrator to authorize your design session.
+            <p className="text-xs text-[#737373] font-sans leading-relaxed max-w-sm mx-auto">
+              Please enter valid credentials to establish an authorized secure session for project portfolio actions.
             </p>
           </div>
 
@@ -102,10 +97,10 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="bg-white border border-slate-200 rounded-2xl shadow-xl p-8 space-y-6"
+            transition={{ duration: 0.3 }}
+            className="bg-white border border-[#e5e5e5] rounded-lg p-8 space-y-6 shadow-sm"
           >
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <form onSubmit={handleLoginSubmit} className="space-y-5">
               {/* Error Message Box */}
               <AnimatePresence mode="wait">
                 {error && (
@@ -113,7 +108,7 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
                     initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -5 }}
-                    className="flex items-start gap-2.5 p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-700 text-xs"
+                    className="flex items-start gap-2.5 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-mono"
                   >
                     <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                     <span>{error}</span>
@@ -122,19 +117,19 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
               </AnimatePresence>
 
               {/* Identifier Input */}
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+              <div className="space-y-1.5">
+                <label className="block font-mono text-[10px] uppercase tracking-wider text-[#737373]">
                   Username or Email Address
                 </label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-[#737373]/50 pointer-events-none">
                     <Mail className="w-4 h-4" />
                   </span>
                   <input
                     type="text"
                     required
                     placeholder="e.g. name@company.com or Full Name"
-                    className="w-full pl-9 pr-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all text-slate-800"
+                    className="w-full pl-10 pr-4 py-3 text-xs bg-white border border-[#e5e5e5] rounded focus:outline-none focus:border-black transition-all text-[#0a0a0a] font-mono placeholder-slate-400"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                   />
@@ -142,26 +137,26 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
               </div>
 
               {/* Password Input */}
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+              <div className="space-y-1.5">
+                <label className="block font-mono text-[10px] uppercase tracking-wider text-[#737373]">
                   Access Password
                 </label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 pointer-events-none">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-[#737373]/50 pointer-events-none">
                     <Key className="w-4 h-4" />
                   </span>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
                     placeholder="••••••••"
-                    className="w-full pl-9 pr-10 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-all text-slate-800"
+                    className="w-full pl-10 pr-10 py-3 text-xs bg-white border border-[#e5e5e5] rounded focus:outline-none focus:border-black transition-all text-[#0a0a0a] font-mono placeholder-slate-400"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer focus:outline-none"
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#737373]/50 hover:text-black cursor-pointer focus:outline-none"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -171,7 +166,7 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full mt-2 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 transition-all cursor-pointer select-none uppercase tracking-wider"
+                className="w-full mt-3 py-3 px-4 bg-black hover:bg-[#333333] text-white text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer select-none active:scale-95 rounded"
               >
                 Verify & Enter Workspace
                 <ArrowRight className="w-4 h-4" />
@@ -179,9 +174,9 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
             </form>
 
             {/* Note text */}
-            <div className="border-t border-slate-100 pt-4 text-center">
-              <p className="text-[10px] text-slate-400 leading-relaxed">
-                Passwords are assigned and managed by your workspace Administrator. Contact them if you require access details or need a credential reset.
+            <div className="border-t border-[#e5e5e5] pt-4 text-center">
+              <p className="text-[10px] text-[#737373] leading-relaxed font-mono">
+                Credentials are managed by the admin panel. Please contact your administrator if you require access or a credential reset.
               </p>
             </div>
           </motion.div>
@@ -189,10 +184,8 @@ export const TeamLoginPortal: React.FC<TeamLoginPortalProps> = ({ users, onLogin
       </main>
 
       {/* Bottom Footer */}
-      <footer className="px-6 py-4 border-t border-slate-150 bg-white/50 backdrop-blur-md z-10 text-center select-none">
-        <p className="text-[10px] text-slate-400 font-medium">
-          Nexus Design Ops Portal v2.5.0 • Secure Gateway Sandbox
-        </p>
+      <footer className="px-8 py-5 border-t border-[#e5e5e5] bg-white/50 backdrop-blur-md z-10 text-center select-none font-mono text-[9px] uppercase tracking-widest text-[#737373]">
+        Nexus Design Ops Portal v2.5.0 • Authorized Sessions Only
       </footer>
     </div>
   );

@@ -357,10 +357,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   };
 
   const isViewer = currentUser.role === 'viewer';
+  const isAdmin = currentUser.role === 'admin';
   const lastStageId = stages[stages.length - 1]?.id || 'approved';
   const completedTasksCount = projectTasks.filter(t => t.stageId === lastStageId || t.stageId === 'approved').length;
 
   const handleApplyPresetInBoard = (presetType: 'waterfall' | 'agile' | 'simple') => {
+    if (!isAdmin) {
+      setLocalFeedback("Only workspace administrators can change project delivery methodology and presets.");
+      return;
+    }
     let presetStages: WorkflowStage[] = [];
     if (presetType === 'waterfall') {
       presetStages = [
@@ -410,56 +415,144 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const targetCapacity = visualSettings?.agileTargetCapacity || 30;
   const loadPercentage = Math.min(100, Math.round((currentLoad / targetCapacity) * 100)) || 0;
 
+  const getBrandClasses = () => {
+    const color = visualSettings?.primaryColor || 'indigo';
+    const mapping = {
+      indigo: {
+        text: 'text-indigo-600',
+        textSoft: 'text-indigo-700',
+        bg: 'bg-indigo-600',
+        bgHover: 'hover:bg-indigo-700',
+        bgSoft: 'bg-indigo-50',
+        bgSoftHover: 'hover:bg-indigo-100/80',
+        borderSoft: 'border-indigo-100',
+        ring: 'focus:ring-indigo-100',
+        borderFocus: 'focus:border-indigo-500',
+        accentText: 'text-indigo-600',
+        hoverText: 'hover:text-indigo-600',
+        hoverBorder: 'hover:border-indigo-200',
+        bg500: 'bg-indigo-500',
+        text400: 'text-indigo-400',
+        shadowGlow: 'shadow-[0_0_10px_rgba(99,102,241,0.5)]',
+        gradientGlow: 'from-slate-900 via-indigo-950 to-slate-900',
+        borderBrand: 'border-indigo-500',
+        borderBrandSoft: 'border-indigo-200',
+        ringBrand: 'ring-indigo-500/20'
+      },
+      emerald: {
+        text: 'text-emerald-600',
+        textSoft: 'text-emerald-700',
+        bg: 'bg-emerald-600',
+        bgHover: 'hover:bg-emerald-700',
+        bgSoft: 'bg-emerald-50',
+        bgSoftHover: 'hover:bg-emerald-100/80',
+        borderSoft: 'border-emerald-100',
+        ring: 'focus:ring-emerald-100',
+        borderFocus: 'focus:border-emerald-500',
+        accentText: 'text-emerald-600',
+        hoverText: 'hover:text-emerald-600',
+        hoverBorder: 'hover:border-emerald-200',
+        bg500: 'bg-emerald-500',
+        text400: 'text-emerald-400',
+        shadowGlow: 'shadow-[0_0_10px_rgba(16,185,129,0.5)]',
+        gradientGlow: 'from-slate-900 via-emerald-950 to-slate-900',
+        borderBrand: 'border-emerald-500',
+        borderBrandSoft: 'border-emerald-200',
+        ringBrand: 'ring-emerald-500/20'
+      },
+      amber: {
+        text: 'text-amber-600',
+        textSoft: 'text-amber-700',
+        bg: 'bg-amber-600',
+        bgHover: 'hover:bg-amber-700',
+        bgSoft: 'bg-amber-50',
+        bgSoftHover: 'hover:bg-amber-100/80',
+        borderSoft: 'border-amber-100',
+        ring: 'focus:ring-amber-100',
+        borderFocus: 'focus:border-amber-500',
+        accentText: 'text-amber-600',
+        hoverText: 'hover:text-amber-600',
+        hoverBorder: 'hover:border-amber-200',
+        bg500: 'bg-amber-500',
+        text400: 'text-amber-400',
+        shadowGlow: 'shadow-[0_0_10px_rgba(245,158,11,0.5)]',
+        gradientGlow: 'from-slate-900 via-amber-950 to-slate-900',
+        borderBrand: 'border-amber-500',
+        borderBrandSoft: 'border-amber-200',
+        ringBrand: 'ring-amber-500/20'
+      },
+      rose: {
+        text: 'text-rose-600',
+        textSoft: 'text-rose-700',
+        bg: 'bg-rose-600',
+        bgHover: 'hover:bg-rose-700',
+        bgSoft: 'bg-rose-50',
+        bgSoftHover: 'hover:bg-rose-100/80',
+        borderSoft: 'border-rose-100',
+        ring: 'focus:ring-rose-100',
+        borderFocus: 'focus:border-rose-500',
+        accentText: 'text-rose-600',
+        hoverText: 'hover:text-rose-600',
+        hoverBorder: 'hover:border-rose-200',
+        bg500: 'bg-rose-500',
+        text400: 'text-rose-400',
+        shadowGlow: 'shadow-[0_0_10px_rgba(244,63,94,0.5)]',
+        gradientGlow: 'from-slate-900 via-rose-955 to-slate-900',
+        borderBrand: 'border-rose-500',
+        borderBrandSoft: 'border-rose-200',
+        ringBrand: 'ring-rose-500/20'
+      },
+      violet: {
+        text: 'text-violet-600',
+        textSoft: 'text-violet-700',
+        bg: 'bg-violet-600',
+        bgHover: 'hover:bg-violet-700',
+        bgSoft: 'bg-violet-50',
+        bgSoftHover: 'hover:bg-violet-100/80',
+        borderSoft: 'border-violet-100',
+        ring: 'focus:ring-violet-100',
+        borderFocus: 'focus:border-violet-500',
+        accentText: 'text-violet-600',
+        hoverText: 'hover:text-violet-600',
+        hoverBorder: 'hover:border-violet-200',
+        bg500: 'bg-violet-500',
+        text400: 'text-violet-400',
+        shadowGlow: 'shadow-[0_0_10px_rgba(139,92,246,0.5)]',
+        gradientGlow: 'from-slate-900 via-violet-950 to-slate-900',
+        borderBrand: 'border-violet-500',
+        borderBrandSoft: 'border-violet-200',
+        ringBrand: 'ring-violet-500/20'
+      },
+      cyan: {
+        text: 'text-cyan-600',
+        textSoft: 'text-cyan-700',
+        bg: 'bg-cyan-600',
+        bgHover: 'hover:bg-cyan-700',
+        bgSoft: 'bg-cyan-50',
+        bgSoftHover: 'hover:bg-cyan-100/80',
+        borderSoft: 'border-cyan-100',
+        ring: 'focus:ring-cyan-100',
+        borderFocus: 'focus:border-cyan-500',
+        accentText: 'text-cyan-600',
+        hoverText: 'hover:text-cyan-600',
+        hoverBorder: 'hover:border-cyan-200',
+        bg500: 'bg-cyan-500',
+        text400: 'text-cyan-400',
+        shadowGlow: 'shadow-[0_0_10px_rgba(6,182,212,0.5)]',
+        gradientGlow: 'from-slate-900 via-cyan-955 to-slate-900',
+        borderBrand: 'border-cyan-500',
+        borderBrandSoft: 'border-cyan-200',
+        ringBrand: 'ring-cyan-500/20'
+      }
+    };
+    return mapping[color] || mapping.indigo;
+  };
+  const brand = getBrandClasses();
+
   return (
     <div className="space-y-6">
       
-      {/* Segmented View Mode Toggle: Methodology vs Pipeline */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-1.5 rounded-xl border border-slate-200/80 shadow-3xs">
-        <div className="flex items-center gap-2">
-          <div className="p-1 bg-white rounded-lg border border-slate-200/60 flex items-center gap-1 shadow-3xs">
-            <button
-              onClick={() => setBoardViewMode('pipeline')}
-              className={`group flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                boardViewMode === 'pipeline'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-850 hover:bg-slate-50'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="hidden sm:inline group-hover:inline group-focus:inline group-active:inline whitespace-nowrap">Pipeline View</span>
-            </button>
-            <button
-              onClick={() => setBoardViewMode('methodology')}
-              className={`group flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                boardViewMode === 'methodology'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-850 hover:bg-slate-50'
-              }`}
-            >
-              <Compass className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="hidden sm:inline group-hover:inline group-focus:inline group-active:inline whitespace-nowrap">Methodology & Presets</span>
-            </button>
-          </div>
-          <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest font-mono ml-1 hidden md:inline">
-            Active Delivery Standard: <span className="text-indigo-600 font-extrabold">{visualSettings?.activeMethodology || 'waterfall'}</span>
-          </span>
-        </div>
 
-        {/* Dynamic status or helper text on current selection */}
-        <div className="text-[11px] text-slate-500 font-medium select-none px-2 flex items-center gap-1.5">
-          {boardViewMode === 'pipeline' ? (
-            <>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Flowing {filteredTasks.length} design tickets across {stages.length} pipeline phases</span>
-            </>
-          ) : (
-            <>
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-              <span>Standardize project stage structures & iteration rules</span>
-            </>
-          )}
-        </div>
-      </div>
 
       {/* Bulk Actions Toolbar */}
       <AnimatePresence>
@@ -468,16 +561,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="sticky top-[57px] z-30 flex items-center justify-between gap-4 bg-indigo-600 text-white px-4 py-2.5 rounded-xl shadow-lg border border-indigo-500"
+            className="sticky top-[57px] z-30 flex items-center justify-between gap-4 bg-black text-white px-4 py-2.5 rounded shadow-lg border border-black"
           >
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-6 h-6 bg-white/20 rounded-full text-[11px] font-bold">
+              <div className="flex items-center justify-center w-6 h-6 bg-white/20 rounded-full text-[11px] font-bold font-mono">
                 {selectedTaskIds.length}
               </div>
               <span className="text-xs font-bold tracking-tight">Tasks Selected</span>
               <button 
                 onClick={() => setSelectedTaskIds([])}
-                className="text-[10px] font-bold uppercase tracking-widest text-indigo-100 hover:text-white transition-colors cursor-pointer ml-2"
+                className="text-[10px] font-bold uppercase tracking-widest text-[#a3a3a3] hover:text-white transition-colors cursor-pointer ml-2"
               >
                 Clear
               </button>
@@ -571,12 +664,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-2.5 sm:p-3 rounded-lg border border-slate-200 shadow-3xs w-full">
         
         {/* Search */}
-        <div className="relative w-full md:w-[350px] shrink-0 p-2 sm:p-4">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+        <div className="relative w-full md:w-[300px] shrink-0 p-2 sm:py-2.5 sm:px-3">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-4 sm:left-5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search..."
-            className="w-full text-xs pl-8 pr-3 py-1.5 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-100 focus:border-indigo-400 rounded bg-slate-50 hover:bg-slate-50 transition-colors"
+            className={`w-full text-xs pl-8 pr-3 py-1.5 border border-slate-200 focus:outline-none focus:ring-1 ${brand.ring} ${brand.borderFocus} rounded bg-slate-50 hover:bg-slate-50 transition-colors`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -594,7 +687,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 onClick={() => setSelectedDiscipline('all')}
                 className={`group px-2 py-1.5 text-xs font-medium rounded border transition-colors cursor-pointer flex items-center justify-center gap-1.5 w-auto ${
                   selectedDiscipline === 'all' 
-                    ? 'bg-indigo-50 border-indigo-100 text-indigo-700' 
+                    ? `${brand.bgSoft} ${brand.borderSoft} ${brand.textSoft}` 
                     : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
                 }`}
               >
@@ -618,7 +711,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     onClick={() => setSelectedDiscipline(disc)}
                     className={`group px-2 py-1.5 text-xs font-medium rounded border transition-colors capitalize cursor-pointer flex items-center justify-center gap-1.5 w-auto ${
                       selectedDiscipline === disc 
-                        ? 'bg-indigo-50 border-indigo-100 text-indigo-700' 
+                        ? `${brand.bgSoft} ${brand.borderSoft} ${brand.textSoft}` 
                         : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
                     }`}
                   >
@@ -654,7 +747,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           {!isViewer && (
             <button
               onClick={() => setShowAddForm(true)}
-              className="group flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium transition-colors cursor-pointer"
+              className={`group flex items-center gap-1 px-2.5 sm:px-3 py-1.5 ${brand.bg} ${brand.bgHover} text-white rounded text-xs font-medium transition-colors cursor-pointer`}
             >
               <Plus className="w-3.5 h-3.5 flex-shrink-0" />
               <span className="hidden sm:inline group-hover:inline group-focus:inline group-active:inline whitespace-nowrap">Add Task</span>
@@ -679,7 +772,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   <div className="md:col-span-3">
                     <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Target Project</label>
                     <select
-                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-100 focus:border-indigo-400 bg-white cursor-pointer font-medium text-slate-800"
+                      className={`w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 ${brand.ring} ${brand.borderFocus} bg-white cursor-pointer font-medium text-slate-800`}
                       value={newSelectedProjectId}
                       onChange={(e) => setNewSelectedProjectId(e.target.value)}
                       required
@@ -695,7 +788,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   <input
                     type="text"
                     placeholder="e.g., Update seismic joint calculations"
-                    className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-100 focus:border-indigo-400 bg-white"
+                    className={`w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 ${brand.ring} ${brand.borderFocus} bg-white`}
                     value={newTitle}
                     onChange={(e) => setNewTitle(e.target.value)}
                     required
@@ -734,7 +827,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                                 }
                               });
                             }}
-                            className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
+                            className={`w-3.5 h-3.5 rounded ${brand.text} ${brand.ring} border-slate-300 cursor-pointer`}
                           />
                           <span className="capitalize">{disc}</span>
                         </label>
@@ -749,7 +842,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 <textarea
                   placeholder="Outline task details and standards..."
                   rows={2}
-                  className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-100 focus:border-indigo-400 bg-white"
+                  className={`w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 ${brand.ring} ${brand.borderFocus} bg-white`}
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   required
@@ -760,7 +853,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 <div>
                   <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Priority</label>
                   <select
-                    className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-100 focus:border-indigo-400 bg-white cursor-pointer"
+                    className={`w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 ${brand.ring} ${brand.borderFocus} bg-white cursor-pointer`}
                     value={newPriority}
                     onChange={(e) => setNewPriority(e.target.value as any)}
                   >
@@ -775,7 +868,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   <div>
                     <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">T-Shirt Size Weight</label>
                     <select
-                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-100 focus:border-indigo-400 bg-white cursor-pointer"
+                      className={`w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 ${brand.ring} ${brand.borderFocus} bg-white cursor-pointer`}
                       value={newTShirtSize}
                       onChange={(e) => setNewTShirtSize(e.target.value as any)}
                     >
@@ -793,7 +886,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         <span className="font-bold">🔒 Assigned to Yourself</span>
                       </div>
                       <div className="flex items-center gap-2 bg-white px-2 py-1.5 border border-amber-100 rounded">
-                        <div className="w-4 h-4 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-[9px] font-bold">
+                        <div className={`w-4 h-4 rounded-full ${brand.bgSoft} ${brand.textSoft} flex items-center justify-center text-[9px] font-bold`}>
                           {currentUser.name[0]}
                         </div>
                         <span className="font-semibold text-slate-700">{currentUser.name}</span>
@@ -822,7 +915,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                                   }
                                 });
                               }}
-                              className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
+                              className={`w-3.5 h-3.5 rounded ${brand.text} ${brand.ring} border-slate-300 cursor-pointer`}
                             />
                             <span className="truncate" title={u.name}>{u.name}</span>
                           </label>
@@ -835,7 +928,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Due Date</label>
                   <input
                     type="date"
-                    className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-100 focus:border-indigo-400 bg-white cursor-pointer"
+                    className={`w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded focus:outline-none focus:ring-1 ${brand.ring} ${brand.borderFocus} bg-white cursor-pointer`}
                     value={newDueDate}
                     onChange={(e) => setNewDueDate(e.target.value)}
                   />
@@ -886,7 +979,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium cursor-pointer"
+                  className={`px-3 py-1.5 ${brand.bg} ${brand.bgHover} text-white rounded text-xs font-medium cursor-pointer`}
                 >
                   Create Task
                 </button>
@@ -938,7 +1031,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   : 'max-h-[70vh] min-h-[120px] md:min-h-[420px]'
               } ${
                 activeDragOverStageId === stage.id 
-                  ? 'bg-indigo-50/45 border-indigo-400 shadow-sm scale-[1.01]' 
+                  ? `${brand.bgSoft}/45 ${brand.borderBrandSoft} shadow-sm scale-[1.01]` 
                   : 'bg-slate-50 border-slate-200'
               }`}
             >
@@ -974,11 +1067,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               {/* Column Task Area */}
               <div className={`flex-1 overflow-y-auto p-3 sm:p-3.5 space-y-2.5 sm:space-y-3.5 ${isCollapsed ? 'hidden md:block' : 'block'}`}>
                 {sortedStageTasks.length === 0 ? (
-                  <div className={`flex flex-col items-center justify-center h-full py-12 text-slate-400 text-center p-2 border-2 border-dashed rounded-xl transition-colors duration-200 ${
-                    activeDragOverStageId === stage.id ? 'border-indigo-300 bg-indigo-50/30' : 'border-slate-100'
+                  <div className={`flex flex-col items-center justify-center h-full py-12 text-[#737373] text-center p-2 border-2 border-dashed rounded transition-colors duration-200 ${
+                    activeDragOverStageId === stage.id ? 'border-black bg-[#fafafa]' : 'border-slate-100'
                   }`}>
-                    <Plus className={`w-5 h-5 mb-1 transition-colors ${activeDragOverStageId === stage.id ? 'text-indigo-400' : 'text-slate-200'}`} />
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600">{activeDragOverStageId === stage.id ? 'Drop to Add' : 'Empty Column'}</p>
+                    <Plus className={`w-5 h-5 mb-1 transition-colors ${activeDragOverStageId === stage.id ? 'text-black' : 'text-slate-200'}`} />
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#737373] font-mono">{activeDragOverStageId === stage.id ? 'Drop to Add' : 'Empty Column'}</p>
                   </div>
                 ) : (
                   sortedStageTasks.map(task => {
@@ -991,7 +1084,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           <motion.div 
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 6, opacity: 1 }}
-                            className="w-full bg-indigo-500 rounded-full my-1.5 shadow-[0_0_10px_rgba(99,102,241,0.5)] z-10" 
+                            className="w-full bg-black rounded-full my-1.5 z-10" 
                           />
                         )}
                         <motion.div
@@ -1031,10 +1124,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                               : ''
                           } ${
                             draggedTaskId === task.id 
-                              ? 'opacity-25 border-dashed border-indigo-400 scale-[0.97] pointer-events-none' 
+                              ? 'opacity-25 border-dashed border-black scale-[0.97] pointer-events-none' 
                               : ''
                           } ${
-                            selectedTaskIds.includes(task.id) ? 'ring-2 ring-indigo-500 border-indigo-500 bg-indigo-50/10' : ''
+                            selectedTaskIds.includes(task.id) ? 'ring-1 ring-black border-black bg-[#fafafa]' : ''
                           }`}
                         >
                           {/* Selection Checkbox Overlay */}
@@ -1050,8 +1143,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                             >
                               <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
                                 selectedTaskIds.includes(task.id) 
-                                  ? 'bg-indigo-600 border-indigo-600 text-white' 
-                                  : 'bg-white border-slate-300 hover:border-indigo-400'
+                                  ? 'bg-black border-black text-white' 
+                                  : 'bg-white border-[#e5e5e5] hover:border-black'
                               }`}>
                                 {selectedTaskIds.includes(task.id) && <Check className="w-2.5 h-2.5" />}
                               </div>
@@ -1067,7 +1160,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                             <div className="flex items-center gap-1">
                               {!isViewer && (
                                 <div 
-                                  className="text-slate-400 hover:text-indigo-600 hover:bg-slate-100 cursor-grab active:cursor-grabbing p-1 bg-slate-50/80 border border-slate-200 rounded-md transition-all flex items-center justify-center shadow-3xs mr-1 shrink-0" 
+                                  className="text-[#737373] hover:text-black hover:bg-[#fafafa] cursor-grab active:cursor-grabbing p-1 bg-white border border-[#e5e5e5] rounded transition-all flex items-center justify-center mr-1 shrink-0" 
                                   title="Drag or touch and hold this grip handle to move the task card"
                                 >
                                   <GripVertical className="w-4 h-4 md:w-3.5 md:h-3.5 shrink-0" />
@@ -1129,7 +1222,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                                     👕 {task.tShirtSize}
                                   </span>
                                 ) : task.storyPoints ? (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 border border-indigo-200 text-indigo-700 font-mono select-none" title="Story Points Estimation">
+                                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${brand.bgSoft} ${brand.borderBrandSoft} ${brand.textSoft} font-mono select-none`} title="Story Points Estimation">
                                     ⚡ {task.storyPoints} SP
                                   </span>
                                 ) : null}
@@ -1242,7 +1335,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           <div className="flex justify-between items-center bg-slate-50/40 p-1 rounded -mx-1 -mb-1 mt-2">
                             {assignee ? (
                               <div className="flex items-center gap-1">
-                                <div className="w-4 h-4 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center text-[9px] font-bold border border-white">
+                                <div className={`w-4 h-4 rounded-full ${brand.bgSoft} ${brand.textSoft} flex items-center justify-center text-[9px] font-bold border border-white`}>
                                   {assignee.name[0]}
                                 </div>
                                 <span className="text-[10px] text-slate-600 truncate max-w-[80px]">{assignee.name}</span>
@@ -1282,7 +1375,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                                     const nextIdx = (currentIdx + 1) % stages.length;
                                     onUpdateTaskStage(task.id, stages[nextIdx].id);
                                   }}
-                                  className="p-0.5 bg-white border border-slate-150 text-slate-400 rounded hover:bg-slate-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors opacity-0 group-hover:opacity-100"
+                                  className={`p-0.5 bg-white border border-slate-150 text-slate-400 rounded hover:bg-slate-50 ${brand.hoverText} ${brand.hoverBorder} transition-colors opacity-0 group-hover:opacity-100`}
                                   title="Advance lane"
                                 >
                                   <ArrowRight className="w-3 h-3" />
@@ -1295,7 +1388,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           <motion.div 
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 6, opacity: 1 }}
-                            className="w-full bg-indigo-500 rounded-full my-1.5 shadow-[0_0_10px_rgba(99,102,241,0.5)] z-10" 
+                            className={`w-full ${brand.bg500} rounded-full my-1.5 ${brand.shadowGlow} z-10`} 
                           />
                         )}
                       </React.Fragment>
@@ -1311,15 +1404,27 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       ) : (
         <div className="space-y-6">
           {/* Main Hero Header */}
-          <div className="bg-gradient-to-r from-slate-900 via-indigo-955 to-slate-900 text-white p-6 rounded-2xl border border-indigo-950 shadow-md">
+          <div className={`bg-gradient-to-r ${brand.gradientGlow} text-white p-6 rounded-2xl border border-slate-800/80 shadow-md`}>
             <h2 className="text-base font-bold flex items-center gap-2">
-              <Compass className="w-5 h-5 text-indigo-400 animate-spin-slow" />
+              <Compass className={`w-5 h-5 ${brand.text400} animate-spin-slow`} />
               <span>Project Delivery Methodology</span>
             </h2>
             <p className="text-xs text-slate-300 mt-1.5 leading-relaxed max-w-2xl">
-              Standardize your engineering processes by selecting standard pipeline structures. Team members can switch between Waterfall sequential stages and Agile Scrum sprints to streamline active design collaboration.
+              Standardize your engineering processes by selecting standard pipeline structures. Workspace administrators can switch between Waterfall sequential stages and Agile Scrum sprints to streamline active design collaboration.
             </p>
           </div>
+
+          {!isAdmin && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl flex items-start gap-3 text-xs leading-relaxed">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
+              <div>
+                <p className="font-bold">Team Member Access Restricted</p>
+                <p className="text-slate-600 mt-0.5">
+                  You can view the current project delivery methodology, but only workspace administrators are permitted to change methodologies or apply pipeline presets.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Preset Cards Bento Grid */}
           <div>
@@ -1331,7 +1436,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               {/* Card 1: Waterfall */}
               <div className={`p-5 bg-white border rounded-2xl flex flex-col justify-between hover:shadow-md transition-all ${
                 visualSettings?.activeMethodology === 'waterfall'
-                  ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-sm'
+                  ? `${brand.borderBrand} ring-2 ${brand.ringBrand} shadow-sm`
                   : 'border-slate-200'
               }`}>
                 <div>
@@ -1340,7 +1445,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       🏗️ Waterfall System
                     </span>
                     {visualSettings?.activeMethodology === 'waterfall' && (
-                      <span className="text-[9px] uppercase tracking-wider font-extrabold bg-indigo-600 text-white px-2.5 py-0.5 rounded-full">
+                      <span className={`text-[9px] uppercase tracking-wider font-extrabold ${brand.bg} text-white px-2.5 py-0.5 rounded-full`}>
                         ACTIVE STANDARD
                       </span>
                     )}
@@ -1361,7 +1466,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         { id: 'approved', name: 'Issued for Construction' }
                       ].map((item, idx) => (
                         <div key={item.id} className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-700">
-                          <span className="w-4 h-4 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center text-[8px] font-mono">{idx + 1}</span>
+                          <span className={`w-4 h-4 rounded ${brand.bgSoft} ${brand.text} flex items-center justify-center text-[8px] font-mono`}>{idx + 1}</span>
                           <span>{item.name}</span>
                         </div>
                       ))}
@@ -1373,19 +1478,25 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   onClick={() => handleApplyPresetInBoard('waterfall')}
                   className={`w-full py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     visualSettings?.activeMethodology === 'waterfall'
-                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-default'
-                      : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98]'
+                      ? `${brand.bgSoft} ${brand.textSoft} border ${brand.borderBrandSoft} cursor-default`
+                      : !isAdmin
+                        ? 'bg-slate-100 text-slate-400 border border-slate-250 cursor-not-allowed'
+                        : `${brand.bg} text-white ${brand.bgHover} active:scale-[0.98]`
                   }`}
-                  disabled={visualSettings?.activeMethodology === 'waterfall'}
+                  disabled={!isAdmin || visualSettings?.activeMethodology === 'waterfall'}
                 >
-                  {visualSettings?.activeMethodology === 'waterfall' ? '✓ Currently Applied' : 'Apply Waterfall Standard'}
+                  {visualSettings?.activeMethodology === 'waterfall' 
+                    ? '✓ Currently Applied' 
+                    : !isAdmin 
+                      ? 'Admin Role Required' 
+                      : 'Apply Waterfall Standard'}
                 </button>
               </div>
 
               {/* Card 2: Agile */}
               <div className={`p-5 bg-white border rounded-2xl flex flex-col justify-between hover:shadow-md transition-all ${
                 visualSettings?.activeMethodology === 'agile'
-                  ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-sm'
+                  ? `${brand.borderBrand} ring-2 ${brand.ringBrand} shadow-sm`
                   : 'border-slate-200'
               }`}>
                 <div>
@@ -1394,7 +1505,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       ⚡ Agile Scrum
                     </span>
                     {visualSettings?.activeMethodology === 'agile' && (
-                      <span className="text-[9px] uppercase tracking-wider font-extrabold bg-indigo-600 text-white px-2.5 py-0.5 rounded-full">
+                      <span className={`text-[9px] uppercase tracking-wider font-extrabold ${brand.bg} text-white px-2.5 py-0.5 rounded-full`}>
                         ACTIVE STANDARD
                       </span>
                     )}
@@ -1415,7 +1526,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         { id: 'approved', name: 'Done / Delivered' }
                       ].map((item, idx) => (
                         <div key={item.id} className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-700">
-                          <span className="w-4 h-4 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center text-[8px] font-mono">{idx + 1}</span>
+                          <span className={`w-4 h-4 rounded ${brand.bgSoft} ${brand.text} flex items-center justify-center text-[8px] font-mono`}>{idx + 1}</span>
                           <span>{item.name}</span>
                         </div>
                       ))}
@@ -1427,19 +1538,25 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   onClick={() => handleApplyPresetInBoard('agile')}
                   className={`w-full py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     visualSettings?.activeMethodology === 'agile'
-                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-default'
-                      : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98]'
+                      ? `${brand.bgSoft} ${brand.textSoft} border ${brand.borderBrandSoft} cursor-default`
+                      : !isAdmin
+                        ? 'bg-slate-100 text-slate-400 border border-slate-250 cursor-not-allowed'
+                        : `${brand.bg} text-white ${brand.bgHover} active:scale-[0.98]`
                   }`}
-                  disabled={visualSettings?.activeMethodology === 'agile'}
+                  disabled={!isAdmin || visualSettings?.activeMethodology === 'agile'}
                 >
-                  {visualSettings?.activeMethodology === 'agile' ? '✓ Currently Applied' : 'Apply Agile Scrum Standard'}
+                  {visualSettings?.activeMethodology === 'agile' 
+                    ? '✓ Currently Applied' 
+                    : !isAdmin 
+                      ? 'Admin Role Required' 
+                      : 'Apply Agile Scrum Standard'}
                 </button>
               </div>
 
               {/* Card 3: Simple */}
               <div className={`p-5 bg-white border rounded-2xl flex flex-col justify-between hover:shadow-md transition-all ${
                 visualSettings?.activeMethodology === 'simple'
-                  ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-sm'
+                  ? `${brand.borderBrand} ring-2 ${brand.ringBrand} shadow-sm`
                   : 'border-slate-200'
               }`}>
                 <div>
@@ -1448,7 +1565,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       📝 Simple Kanban
                     </span>
                     {visualSettings?.activeMethodology === 'simple' && (
-                      <span className="text-[9px] uppercase tracking-wider font-extrabold bg-indigo-600 text-white px-2.5 py-0.5 rounded-full">
+                      <span className={`text-[9px] uppercase tracking-wider font-extrabold ${brand.bg} text-white px-2.5 py-0.5 rounded-full`}>
                         ACTIVE STANDARD
                       </span>
                     )}
@@ -1468,7 +1585,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         { id: 'approved', name: 'Completed / Done' }
                       ].map((item, idx) => (
                         <div key={item.id} className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-700">
-                          <span className="w-4 h-4 rounded bg-indigo-50 text-indigo-600 flex items-center justify-center text-[8px] font-mono">{idx + 1}</span>
+                          <span className={`w-4 h-4 rounded ${brand.bgSoft} ${brand.text} flex items-center justify-center text-[8px] font-mono`}>{idx + 1}</span>
                           <span>{item.name}</span>
                         </div>
                       ))}
@@ -1480,12 +1597,18 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   onClick={() => handleApplyPresetInBoard('simple')}
                   className={`w-full py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     visualSettings?.activeMethodology === 'simple'
-                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-default'
-                      : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98]'
+                      ? `${brand.bgSoft} ${brand.textSoft} border ${brand.borderBrandSoft} cursor-default`
+                      : !isAdmin
+                        ? 'bg-slate-100 text-slate-400 border border-slate-250 cursor-not-allowed'
+                        : `${brand.bg} text-white ${brand.bgHover} active:scale-[0.98]`
                   }`}
-                  disabled={visualSettings?.activeMethodology === 'simple'}
+                  disabled={!isAdmin || visualSettings?.activeMethodology === 'simple'}
                 >
-                  {visualSettings?.activeMethodology === 'simple' ? '✓ Currently Applied' : 'Apply Simple Standard'}
+                  {visualSettings?.activeMethodology === 'simple' 
+                    ? '✓ Currently Applied' 
+                    : !isAdmin 
+                      ? 'Admin Role Required' 
+                      : 'Apply Simple Standard'}
                 </button>
               </div>
 

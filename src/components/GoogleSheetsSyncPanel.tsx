@@ -405,7 +405,7 @@ export const GoogleSheetsSyncPanel: React.FC<GoogleSheetsSyncPanelProps> = ({
             {/* Step 1: Linking a Spreadsheet */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
               <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold">1</span>
+                <span className={`w-5 h-5 rounded-full ${brand.bgSoft} border ${brand.borderSoft} ${brand.text} flex items-center justify-center text-[10px] font-bold`}>1</span>
                 Link Spreadsheet Database
               </h3>
 
@@ -417,7 +417,7 @@ export const GoogleSheetsSyncPanel: React.FC<GoogleSheetsSyncPanelProps> = ({
                     <button
                       onClick={handleSearchSpreadsheets}
                       disabled={isSearchingSheets}
-                      className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1 cursor-pointer"
+                      className={`text-[10px] font-bold ${brand.text} hover:opacity-80 transition-colors flex items-center gap-1 cursor-pointer`}
                     >
                       <RefreshCw className={`w-3 h-3 ${isSearchingSheets ? 'animate-spin' : ''}`} />
                       Refresh List
@@ -427,7 +427,7 @@ export const GoogleSheetsSyncPanel: React.FC<GoogleSheetsSyncPanelProps> = ({
                   <select
                     value={selectedSpreadsheetId}
                     onChange={(e) => setSelectedSpreadsheetId(e.target.value)}
-                    className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                    className={`w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:ring-1 ${brand.ring} ${brand.borderFocus}`}
                   >
                     <option value="">-- Choose a spreadsheet --</option>
                     {spreadsheets.map(sheet => (
@@ -446,7 +446,7 @@ export const GoogleSheetsSyncPanel: React.FC<GoogleSheetsSyncPanelProps> = ({
                     <input
                       type="text"
                       placeholder="Database spreadsheet name"
-                      className="w-full px-3 py-2 border border-slate-200 bg-white rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                      className={`w-full px-3 py-2 border border-slate-200 bg-white rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 ${brand.ring} ${brand.borderFocus}`}
                       value={newSpreadsheetName}
                       onChange={(e) => setNewSpreadsheetName(e.target.value)}
                     />
@@ -454,7 +454,7 @@ export const GoogleSheetsSyncPanel: React.FC<GoogleSheetsSyncPanelProps> = ({
                   <button
                     onClick={handleCreateNewSpreadsheet}
                     disabled={isCreatingSheet}
-                    className={`w-full mt-3 py-2 px-3 border border-indigo-200 hover:bg-indigo-55/20 text-indigo-700 bg-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50`}
+                    className={`w-full mt-3 py-2 px-3 border ${brand.borderBrandSoft} ${brand.bgSoftHover} ${brand.text} bg-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50`}
                   >
                     <Plus className="w-3.5 h-3.5" />
                     {isCreatingSheet ? 'Creating spreadsheet...' : 'Initialize New Database'}
@@ -467,7 +467,7 @@ export const GoogleSheetsSyncPanel: React.FC<GoogleSheetsSyncPanelProps> = ({
                 <input
                   type="text"
                   placeholder="Paste manual Google Spreadsheet ID..."
-                  className="flex-1 px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                  className={`flex-1 px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 ${brand.ring} ${brand.borderFocus}`}
                   value={customSpreadsheetId}
                   onChange={(e) => setCustomSpreadsheetId(e.target.value)}
                 />
@@ -510,7 +510,7 @@ export const GoogleSheetsSyncPanel: React.FC<GoogleSheetsSyncPanelProps> = ({
             {/* Step 2: Push and Pull operations */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
               <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold">2</span>
+                <span className={`w-5 h-5 rounded-full ${brand.bgSoft} border ${brand.borderSoft} ${brand.text} flex items-center justify-center text-[10px] font-bold`}>2</span>
                 Database Records Synchronization
               </h3>
 
@@ -544,7 +544,7 @@ export const GoogleSheetsSyncPanel: React.FC<GoogleSheetsSyncPanelProps> = ({
                 <div className="p-4 border border-slate-150 rounded-xl space-y-3 flex flex-col justify-between">
                   <div className="space-y-1">
                     <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                      <ArrowDownLeft className="w-4 h-4 text-indigo-500" />
+                      <ArrowDownLeft className={`w-4 h-4 ${brand.text}`} />
                       Pull from Google Sheets
                     </h4>
                     <p className="text-[11px] text-slate-450 leading-relaxed">
@@ -554,7 +554,7 @@ export const GoogleSheetsSyncPanel: React.FC<GoogleSheetsSyncPanelProps> = ({
                   <button
                     onClick={() => handlePull(false)}
                     disabled={isPulling || !selectedSpreadsheetId}
-                    className={`w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50`}
+                    className={`w-full py-2.5 px-4 ${brand.bg} ${brand.bgHover} text-white font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50`}
                   >
                     {isPulling ? (
                       <RefreshCw className="w-4 h-4 animate-spin" />
@@ -567,11 +567,11 @@ export const GoogleSheetsSyncPanel: React.FC<GoogleSheetsSyncPanelProps> = ({
               </div>
 
               {/* Automatic frequent synchronization setup */}
-              <div className="p-4 bg-indigo-50/40 border border-indigo-100 rounded-xl space-y-4">
+              <div className={`p-4 ${brand.bgSoft}/40 border ${brand.borderSoft} rounded-xl space-y-4`}>
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                      <Clock className="w-4 h-4 text-indigo-600" />
+                      <Clock className={`w-4 h-4 ${brand.text}`} />
                       Frequent Team Auto-Sync (Real-Time Pull)
                     </h4>
                     <p className="text-[11px] text-slate-500 max-w-lg">
@@ -586,15 +586,15 @@ export const GoogleSheetsSyncPanel: React.FC<GoogleSheetsSyncPanelProps> = ({
                       onChange={(e) => setAutoSyncEnabled(e.target.checked)}
                       disabled={!selectedSpreadsheetId}
                     />
-                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                    <div className={`w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:${brand.bg}`}></div>
                   </label>
                 </div>
 
                 {autoSyncEnabled && (
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-indigo-100/50 text-[11px] text-indigo-800">
+                  <div className={`flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-[11px] ${brand.textSoft}`}>
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>Auto-Sync running. Syncing in: <strong className="font-mono bg-white border border-indigo-150 px-1.5 py-0.5 rounded">{timeToNextSync}s</strong></span>
+                      <span>Auto-Sync running. Syncing in: <strong className="font-mono bg-white border border-slate-200 px-1.5 py-0.5 rounded">{timeToNextSync}s</strong></span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span>Sync Interval:</span>
@@ -605,7 +605,7 @@ export const GoogleSheetsSyncPanel: React.FC<GoogleSheetsSyncPanelProps> = ({
                           setAutoSyncInterval(val);
                           setTimeToNextSync(val);
                         }}
-                        className="bg-white border border-indigo-200 rounded px-1.5 py-0.5 text-[10px] font-bold text-slate-700"
+                        className={`bg-white border ${brand.borderBrandSoft || 'border-slate-200'} rounded px-1.5 py-0.5 text-[10px] font-bold text-slate-700 focus:outline-none focus:ring-1 ${brand.ring}`}
                       >
                         <option value="15">15s (Ultra Fast)</option>
                         <option value="30">30s (Frequent)</option>
@@ -681,7 +681,7 @@ export const GoogleSheetsSyncPanel: React.FC<GoogleSheetsSyncPanelProps> = ({
                       <div className="space-y-0.5 leading-tight">
                         <p className={`font-bold uppercase text-[8px] ${
                           log.type === 'push' ? 'text-amber-600' :
-                          log.type === 'pull' ? 'text-indigo-600' :
+                          log.type === 'pull' ? brand.text :
                           log.type === 'error' ? 'text-rose-600' : 'text-emerald-600'
                         }`}>
                           {log.type}

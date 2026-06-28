@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Project, Task, User, WorkflowStage, TaskType } from '../types';
+import { Project, Task, User, WorkflowStage, TaskType, VisualSettings } from '../types';
 import { filterTasksByTimeframe } from '../utils/reports';
 import { motion } from 'motion/react';
+import { getBrandClasses } from '../utils/theme';
 
 interface ReportsPanelProps {
   projects: Project[];
@@ -10,6 +11,7 @@ interface ReportsPanelProps {
   stages: WorkflowStage[];
   currentUser: User;
   reportTemplateSettings?: any;
+  visualSettings?: VisualSettings;
 }
 
 export const ReportsPanel: React.FC<ReportsPanelProps> = ({
@@ -19,8 +21,11 @@ export const ReportsPanel: React.FC<ReportsPanelProps> = ({
   stages,
   currentUser,
   reportTemplateSettings,
+  visualSettings,
 }) => {
+  const brand = getBrandClasses(visualSettings?.primaryColor);
   const isTeamMember = currentUser.role !== 'admin' && currentUser.role !== 'viewer';
+
   // Filters: Selected Project & Selected Timeframe
   const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
   const [selectedTimeframe, setSelectedTimeframe] = useState<'daily' | 'weekly' | 'monthly' | 'all'>('all');
@@ -102,7 +107,7 @@ export const ReportsPanel: React.FC<ReportsPanelProps> = ({
           <div>
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1 font-mono">Scope Asset</label>
             <select
-              className="text-xs font-semibold px-3 py-2 border border-slate-200 bg-slate-50 hover:bg-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 cursor-pointer text-slate-800"
+              className={`text-xs font-semibold px-3 py-2 border border-slate-200 bg-slate-50 hover:bg-slate-100 rounded-lg focus:outline-none focus:ring-2 ${brand.ring} ${brand.borderFocus} cursor-pointer text-slate-800`}
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
             >
@@ -117,7 +122,7 @@ export const ReportsPanel: React.FC<ReportsPanelProps> = ({
           <div>
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1 font-mono">Duration Window</label>
             <select
-              className="text-xs font-semibold px-3 py-2 border border-slate-200 bg-slate-50 hover:bg-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 cursor-pointer text-slate-800"
+              className={`text-xs font-semibold px-3 py-2 border border-slate-200 bg-slate-50 hover:bg-slate-100 rounded-lg focus:outline-none focus:ring-2 ${brand.ring} ${brand.borderFocus} cursor-pointer text-slate-800`}
               value={selectedTimeframe}
               onChange={(e) => setSelectedTimeframe(e.target.value as any)}
             >
