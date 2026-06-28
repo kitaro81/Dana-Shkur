@@ -161,9 +161,14 @@ export default function App() {
     }
 
     const saved = localStorage.getItem('nexus_current_user_id') || sessionStorage.getItem('nexus_current_user_id');
+    
+    // Check localStorage for all users first
+    const localUsers = localStorage.getItem('kanban_users');
+    const allUsers: User[] = localUsers ? JSON.parse(localUsers) : INITIAL_USERS;
+    
     let user = INITIAL_USERS[0];
     if (saved) {
-      const match = INITIAL_USERS.find(u => u.id === saved);
+      const match = allUsers.find(u => u.id === saved);
       if (match) user = match;
     }
     if (user.id === 'user-admin') {
