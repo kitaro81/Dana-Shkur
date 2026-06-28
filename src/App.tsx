@@ -160,7 +160,7 @@ export default function App() {
       localStorage.setItem('kanban_empty_reset_v3', 'true');
     }
 
-    const saved = sessionStorage.getItem('nexus_current_user_id');
+    const saved = localStorage.getItem('nexus_current_user_id') || sessionStorage.getItem('nexus_current_user_id');
     let user = INITIAL_USERS[0];
     if (saved) {
       const match = INITIAL_USERS.find(u => u.id === saved);
@@ -173,7 +173,7 @@ export default function App() {
   });
 
   const [isLoggedOut, setIsLoggedOut] = useState<boolean>(() => {
-    return sessionStorage.getItem('nexus_logged_out') !== 'false';
+    return localStorage.getItem('nexus_logged_out') !== 'false' && sessionStorage.getItem('nexus_logged_out') !== 'false';
   });
 
   const [showProfilePopover, setShowProfilePopover] = useState(false);
@@ -1233,13 +1233,16 @@ export default function App() {
     setCurrentUser(user);
     setIsLoggedOut(false);
     sessionStorage.setItem('nexus_current_user_id', user.id);
+    localStorage.setItem('nexus_current_user_id', user.id);
     sessionStorage.setItem('nexus_logged_out', 'false');
+    localStorage.setItem('nexus_logged_out', 'false');
     triggerToast(`Welcome back, ${user.name}! Authenticated successfully.`, 'success');
   };
 
   const handleLogout = () => {
     setIsLoggedOut(true);
     sessionStorage.setItem('nexus_logged_out', 'true');
+    localStorage.setItem('nexus_logged_out', 'true');
     setShowProfilePopover(false);
     triggerToast('Logged out of workspace session.', 'info');
   };
