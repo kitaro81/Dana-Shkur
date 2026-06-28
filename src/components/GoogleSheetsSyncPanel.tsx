@@ -60,10 +60,13 @@ export const GoogleSheetsSyncPanel: React.FC<GoogleSheetsSyncPanelProps> = ({
   const [needsAuth, setNeedsAuth] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
+  // Default Master Admin Spreadsheet ID
+  const DEFAULT_SPREADSHEET_ID = '1BxiMVs0XRA5nFMdKv1aM93R48CmL9u95K6Ad3_14AQU';
+
   // Spreadsheet Selection State
   const [spreadsheets, setSpreadsheets] = useState<{ id: string; name: string }[]>([]);
   const [selectedSpreadsheetId, setSelectedSpreadsheetId] = useState<string>(() => {
-    return localStorage.getItem('gapi_spreadsheet_id') || '';
+    return localStorage.getItem('gapi_spreadsheet_id') || DEFAULT_SPREADSHEET_ID;
   });
   const [customSpreadsheetId, setCustomSpreadsheetId] = useState('');
   const [newSpreadsheetName, setNewSpreadsheetName] = useState('Nexus Design Ops Database');
@@ -74,7 +77,8 @@ export const GoogleSheetsSyncPanel: React.FC<GoogleSheetsSyncPanelProps> = ({
   const [isPushing, setIsPushing] = useState(false);
   const [isPulling, setIsPulling] = useState(false);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState<boolean>(() => {
-    return localStorage.getItem('gapi_auto_sync') === 'true';
+    const saved = localStorage.getItem('gapi_auto_sync');
+    return saved !== null ? saved === 'true' : true;
   });
   const [autoSyncInterval, setAutoSyncInterval] = useState<number>(60); // default 60s
   const [timeToNextSync, setTimeToNextSync] = useState(60);
